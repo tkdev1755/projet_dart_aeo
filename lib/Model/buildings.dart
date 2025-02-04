@@ -11,6 +11,7 @@ class Building{
   int nominalBuildingTime;
   int popAddition;
   int builders = 0;
+  Map<String, int> cost;
   String spawns;
 
   Building(
@@ -22,6 +23,7 @@ class Building{
       this.nominalBuildingTime,
       this.popAddition,
       this.spawns,
+      {required this.cost}
       );
 
   List<(int,int)> getOccupiedTiles(){
@@ -31,6 +33,7 @@ class Building{
     int finalYPos = position.$2+surface.$2;
     for (int y=position.$2; y<finalYPos; y++){
       for (int x=position.$1; x<finalXPos; x++){
+        logger("Pos are ${x},${y}");
         finalPositions.add((x,y));
       }
     }
@@ -39,6 +42,10 @@ class Building{
   @override
   String toString() {
     return name;
+  }
+
+  bool isInRange((int,int) position){
+    return (position[0]-this.position[0]).abs() <= 1 && (position[1]-this.position[1]).abs();
   }
 }
 
@@ -55,7 +62,8 @@ class TownCenter extends Building {
     (4, 4),
     60,
     5,
-    "v"
+    "v",
+    cost: {"w" : 350}
   );
 
 

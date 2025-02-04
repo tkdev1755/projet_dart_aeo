@@ -8,6 +8,9 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  dart_console: ^4.1.1
+  a_star_algorithm: ^0.4.1
+  console: ^4.1.0
   # path: ^1.8.0
 
 dev_dependencies:

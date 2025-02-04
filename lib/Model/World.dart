@@ -11,10 +11,10 @@ import '../projet_dart_aeo.dart';
 class World{
   int width;
   int height;
-  Map<Record, Tile> tiles = {};
-  Map<Record, Unit> unitPositions = {};
-  Map<Record, Resources> resources = {};
-  Map<String, Village> villages = {};
+  Map<(int,int), Tile> tiles = {};
+  Map<(int,int), List<Unit>> unitPositions = {};
+  Map<(int,int), Resources> resources = {};
+  List villages = [];
 
   World(
       this.width,
@@ -30,7 +30,8 @@ class World{
     if (element is Building){
       logger("IT'S A BULDING !");
       List<(int,int)> occupiedTiles = element.getOccupiedTiles();
-      if (checkIfOccupied(occupiedTiles)){
+      if (!checkIfOccupied(occupiedTiles)){
+        logger("Apparently there is something in the way");
         // ADD Exception
         return -1;
       }
@@ -63,6 +64,48 @@ class World{
       tiles[element.position]!.contains = element;
       return 0;
     }
+
+  }
+  int addUnit(Unit unit){
+    if (!(unitPositions.containsKey(unit.position))){
+      logger("key does not exists");
+      unitPositions[unit.position] = [];
+      unitPositions[unit.position]!.add(unit);
+    }
+    else{
+      unitPositions[unit.position]!.add(unit);
+    }
+    return 0;
+  }
+
+  int addVillage(Village village){
+    try {
+      logger("Adding village");
+      villages.add(village);
+    } catch (e, s) {
+      logger(s.toString());
+      return -1;
+    }
+    return 0;
+  }
+
+  int updateUnitPosition((int,int) oldPos,Unit unit){
+    if (unitPositions.containsKey(unit.position)){
+      unitPositions[unit.position]!.add(unit);
+      unitPositions[oldPos]!.remove(unit);
+      if (unitPositions[oldPos]!.isEmpty) {
+        unitPositions.remove(oldPos);
+      }
+    }
+    else{
+      unitPositions[unit.position] = [];
+      unitPositions[unit.position]!.add(unit);
+      unitPositions[oldPos]!.remove(unit);
+      if (unitPositions[oldPos]!.isEmpty) {
+        unitPositions.remove(oldPos);
+      }
+    }
+    return 0;
   }
 
   bool isOutOfBound((int,int) element){
@@ -79,15 +122,19 @@ class World{
     return true;
   }
 
-  String reprWorld(){
+
+  String reprWorld(int y ,int offsetX){
     String fString = "";
-    for (int x=0; x<=width; x++){
-      for (int y = 0; y<=height;y++){
-        if (tiles.containsKey((x,y)) && tiles[(x,y)]!.contains != null) {
-          fString += tiles[(x,y)]!.contains.toString();
-        } else {
-          fString += " ";
-        }
+    for (int x=0+offsetX; x<=(console.windowWidth<width ? console.windowWidth : width)-1; x++){
+      if (tiles.containsKey((x,y)) && tiles[(x,y)]!.contains != null) {
+        fString += tiles[(x,y)]!.contains.toString();
+      }
+      else if (unitPositions.containsKey((x,y)) && unitPositions[(x,y)]!.isNotEmpty){
+        fString += unitPositions[(x,y)]![0].toString();
+
+      }
+      else {
+        fString += " ";
       }
     }
     return fString;

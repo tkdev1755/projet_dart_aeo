@@ -4,11 +4,12 @@
 class Unit{
   String name;
   String uid;
-  Record position;
+  (int,int) position;
   int health;
   int damage;
   double speed;
   String task;
+  Map<String,int> cost = {};
   Map<String, int> pouch = {"w" : 0, "g" : 0};
 
   Unit(
@@ -18,7 +19,8 @@ class Unit{
       this.health,
       this.damage,
       this.speed,
-      this.task
+      this.task,
+      {required this.cost}
       );
   @override
   int get hashCode => super.hashCode;
@@ -34,7 +36,7 @@ class Villager extends Unit{
 
   Villager(
       String uid,
-      Record position,
-      ) : super("v", uid, position, 25, 2,0.8, 'I');
+      (int,int) position,
+      ) : super("v", uid, position, 25, 2,0.8, 'I',cost: {"f" : 50});
 
 }
