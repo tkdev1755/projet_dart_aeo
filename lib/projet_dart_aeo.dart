@@ -1,3 +1,4 @@
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
@@ -46,6 +47,20 @@ int calculate() {
   return tests();
 }
 
+
+Map<int, CG.Color> colorMap = {
+  1 : CG.Color.BLUE,
+  2 : CG.Color.CYAN,
+  3 : CG.Color.GOLD,
+  4 : CG.Color.GREEN,
+  5 : CG.Color.MAGENTA,
+  6 : CG.Color.LIME,
+  7 : CG.Color.DARK_BLUE,
+  8 : CG.Color.LIGHT_CYAN,
+  9 : CG.Color.YELLOW,
+  10 : CG.Color.RED,
+};
+
 final buffer = StringBuffer();
 bool done = false;
 
@@ -62,7 +77,7 @@ int tests(){
     logger("Object type wasn't ok");
     return -1;
   }
-  TownCenter tc1 = TownCenter(newTcID, (15,40));
+  TownCenter tc1 = TownCenter(newTcID, (15,40), village1.name);
   int result = village1.addBuilding(tc1);
   if (result == -1){
     logger("ERRoR");
@@ -73,7 +88,7 @@ int tests(){
     logger("Object type wasn't ok");
     return -1;
   }
-  TownCenter tc2 = TownCenter(newTcID2, (12,12));
+  TownCenter tc2 = TownCenter(newTcID2, (12,12), village1.name);
   int result2 = village1.addBuilding(tc2);
   if (result2 <0){
 
@@ -83,7 +98,7 @@ int tests(){
     logger("Object type wasn't ok");
     return -1;
   }
-  Villager newVillager = Villager(newVillagerUID, (0,2));
+  Villager newVillager = Villager(newVillagerUID, (0,2),village1.name);
   int result3 = village1.addUnit(newVillager);
   if (result3 < 0){
 
@@ -91,7 +106,7 @@ int tests(){
   GameManager gm = GameManager(world,DateTime.now());
   gm.addUnitToMoveDict(newVillager, (3,20));
   String newBuildingID = village1.getNextUID("b");
-  TownCenter tc3 = TownCenter(newBuildingID, (4,20));
+  TownCenter tc3 = TownCenter(newBuildingID, (4,20),village1.name);
   tc3.health = 0;
   village1.addBuilding(tc3);
   gm.addBuildingToBuildDict(tc3, [newVillager.uid]);
@@ -116,11 +131,9 @@ void resetConsole() {
   console.rawMode = false;
 }
 
-void draw(World world, ){
+void draw(World world){
   console.clearScreen();
-
   buffer.clear();
-
   for (var row = 0; row < rows; row++) {
     buffer.write(world.reprWorld(row+offsetY,offsetX));
     buffer.write(console.newLine);
@@ -133,65 +146,20 @@ void draw(World world, ){
 
 
 
-void input(int wHeight, int wWidth, Key key){
-  if (key.isControl) {
-    switch (key.controlChar) {
-      case ControlCharacter.escape:
-        print("escaping cgame");
-        done = true;
-        break;
-      case ControlCharacter.arrowDown:
-        print("offsetY Val : $offsetY, console height ${console.windowHeight}");
-        if (offsetY+console.windowHeight >= wHeight){
-
-        }else{
-          print("going downnnn");
-          offsetY++;
-          print("offsetY Val : $offsetY");
-        }
-        break;
-      case ControlCharacter.arrowUp:
-        print("going uppp");
-        if (offsetY == 0){
-        }
-        else{
-          offsetY--;
-          print("offsetY Val : $offsetY");
-        }
-        break;
-      case ControlCharacter.arrowRight:
-        print("offsetY Val : $offsetX, console height ${console.windowWidth}, world with ${wWidth}");
-
-        if (offsetX+console.windowWidth >= wWidth){
-        }
-        else{
-          offsetX++;
-        }
-        break;
-      case ControlCharacter.arrowLeft:
-        if (offsetX == 0){
-        }
-        else{
-          offsetX--;
-        }
-      default:
-    }
-  }
-
-}
-
 
 void quit() {
   resetConsole();
   exit(0);
 }
 
-readInput(List<int> args) {
+readInput(List<int> args, GameManager gameManager) {
   Stream<String> upStream = CG.Keyboard.bindKey('up');
   Stream<String> downStream = CG.Keyboard.bindKey('down');
   Stream<String> rightStream = CG.Keyboard.bindKey('right');
   Stream<String> leftStream =CG.Keyboard.bindKey('left');
-  Stream<String> escStream =CG.Keyboard.bindKey('ESCAPE');
+  Stream<String> plusStream =CG.Keyboard.bindKey('+');
+  Stream<String> minusStream =CG.Keyboard.bindKey('-');
+  Stream<String> escStream =CG.Keyboard.bindKey('esc');
 
   downStream.listen((_) {
     if (offsetY+console.windowHeight >= args[0]){
@@ -222,7 +190,16 @@ readInput(List<int> args) {
       offsetX--;
     }
   });
-
+  plusStream.listen((event){
+    if (gameManager.gameSpeed < 10){
+      gameManager.gameSpeed ++;
+    }
+  });
+  minusStream.listen((event){
+    if (gameManager.gameSpeed > 1){
+      gameManager.gameSpeed --;
+    }
+  });
   escStream.listen((event){
     print("escaping game");
     exit(0);
@@ -230,16 +207,17 @@ readInput(List<int> args) {
 }
 
 gameLoop(World world, GameManager gameManager) async {
+
   CG.Keyboard.init();
   List<int> args = [world.height, world.width];
   console.rawMode = false;
   console.hideCursor();
-  readInput(args);
+  readInput(args, gameManager);
   try {
     console.rawMode = false;
     console.hideCursor();
     Timer.periodic(const Duration(milliseconds: 200), (t) {
-      draw(world);
+      //draw(world);
       update(world, gameManager);
       gameManager.tick = DateTime.now();
       if (done) quit();

@@ -2,9 +2,22 @@
 
 import '../projet_dart_aeo.dart';
 
+
+Map<String, int> buildingHealthENUM = {
+  "T" : 1000,
+  "H" : 200,
+  "C" : 200,
+  "F" : 100,
+  "B" : 500,
+  "S" : 500,
+  "A" : 500,
+  "K" : 800,
+
+};
 class Building{
   String uid;
   String name;
+  int team;
   (int,int) position;
   double health;
   (int,int) surface;
@@ -16,6 +29,7 @@ class Building{
 
   Building(
       this.uid,
+      this.team,
       this.name,
       this.position,
       this.health,
@@ -41,7 +55,7 @@ class Building{
   }
   @override
   String toString() {
-    return name;
+    return "${health ==  buildingHealthENUM[name]! ? colorMap[team] : colorMap[10]}$name${colorMap[9]}";
   }
 
   bool isInRange((int,int) position){
@@ -54,8 +68,10 @@ class TownCenter extends Building {
   TownCenter(
       String uid,
       (int,int) position,
+      int team,
       ) : super(
     uid,
+    team,
     "T",
     position,
     0,

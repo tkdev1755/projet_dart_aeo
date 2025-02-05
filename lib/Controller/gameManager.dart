@@ -14,17 +14,7 @@ import '../Model/unit.dart';
 
 
 
-Map<String, int> buildingHealthENUM = {
-  "T" : 1000,
-  "H" : 200,
-  "C" : 200,
-  "F" : 100,
-  "B" : 500,
-  "S" : 500,
-  "A" : 500,
-  "K" : 800,
 
-};
 
 class GameManager{
 
@@ -49,6 +39,9 @@ class GameManager{
     return barrierList;
   }
 
+  setGameSpeed(int speed){
+    gameSpeed = speed;
+  }
 
   (int, int) estimateDistance((int,int) t1,(int,int) t2){
     return ((t2[0]-t1[0]).abs(), (t2[1]-t1[1]).abs());
