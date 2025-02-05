@@ -110,6 +110,7 @@ int tests(){
   tc3.health = 0;
   village1.addBuilding(tc3);
   gm.addBuildingToBuildDict(tc3, [newVillager.uid]);
+  gm.addUnitToSpawnDict("v", 1);
   //print(world.reprWorld());
   /*console.clearScreen();
   console.resetCursorPosition();
@@ -120,8 +121,7 @@ int tests(){
 }
 
 void update(World world, GameManager gameManager){
-  gameManager.checkUnitToMove();
-  gameManager.checkBuildingToBuild();
+  gameManager.checkModifications();
 }
 
 void resetConsole() {
@@ -217,7 +217,7 @@ gameLoop(World world, GameManager gameManager) async {
     console.rawMode = false;
     console.hideCursor();
     Timer.periodic(const Duration(milliseconds: 200), (t) {
-      //draw(world);
+      draw(world);
       update(world, gameManager);
       gameManager.tick = DateTime.now();
       if (done) quit();

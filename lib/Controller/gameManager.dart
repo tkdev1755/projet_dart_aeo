@@ -12,7 +12,9 @@ import '../Model/World.dart';
 import '../Model/unit.dart';
 
 
-
+Map<String, Type> unitInitDict = {
+  "v" : Villager,
+};
 
 
 
@@ -24,6 +26,7 @@ class GameManager{
   Map<String, Map<String,dynamic>> moveDict = {};
   Map<String, Map<String,dynamic>> attackDict = {};
   Map<String, Map<String,dynamic>> buildDict = {};
+  Map<String, Map<String, dynamic>> spawnDict = {};
 
   GameManager(
       this.world,
@@ -39,9 +42,6 @@ class GameManager{
     return barrierList;
   }
 
-  setGameSpeed(int speed){
-    gameSpeed = speed;
-  }
 
   (int, int) estimateDistance((int,int) t1,(int,int) t2){
     return ((t2[0]-t1[0]).abs(), (t2[1]-t1[1]).abs());
@@ -63,6 +63,12 @@ class GameManager{
     return int.parse(finalString);
   }
 
+  int checkModifications(){
+    checkUnitToMove();
+    checkBuildingToBuild();
+    checkUnitToSpawn();
+    return 0;
+  }
   int checkUnitToMove(){
     List<dynamic> elementToRemove = [];
     moveDict.forEach((k,v){
@@ -97,6 +103,22 @@ class GameManager{
     return 0;
   }
 
+  int checkUnitToSpawn(){
+    List<dynamic> elementToRemove = [];
+    spawnDict.forEach((k,v){
+      if (v["initialized"]){
+        elementToRemove.add(k);
+      }
+      else{
+        spawnUnit(k);
+      }
+    }
+    );
+    for (var value in elementToRemove){
+      spawnDict.remove(value);
+    }
+    return 0;
+  }
   int addUnitToMoveDict(Unit unit, (int,int) goal){
     List<(int,int)> barriers = getMapBarriers();
     (int,int) distance = estimateDistance(unit.position, goal);
@@ -136,6 +158,22 @@ class GameManager{
     return 0;
   }
 
+  int addUnitToSpawnDict(String type, int team){
+    String nextUID = world.villages[team-1].getNextUID(type);
+    (int,int) tcPosition = world.villages[team-1].community["T"].entries.first.value.position;
+    spawnDict[nextUID] = {
+      "newID" : nextUID,
+      "unitTeam" : team,
+      "unitType" : type,
+      "spawnPosition" : (tcPosition[0]-1,tcPosition[1]-1),
+      "timeElapsed": 0,
+      "timeToTrain" : unitTrainTimeENUM[type],
+      "initialized" : false,
+      "fullyTrained" : false,
+    };
+    return 0;
+  }
+
   int moveUnit(uid){
     Duration delta = DateTime.now().difference(tick);
     logger(" delta iiiis ? $delta");
@@ -170,6 +208,34 @@ class GameManager{
     return 0;
   }
 
+  int spawnUnit(String uid){
+    Duration delta = DateTime.now().difference(tick);
+    int igDelta = delta.inMilliseconds*gameSpeed;
+    double igDeltaInSeconds = igDelta/1000;
+    Map<String, dynamic> unitToSpawn = spawnDict[uid]!;
+    if (unitToSpawn["fullyTrained"]) {
+      logger("Unit fully trained, starting healthFill");
+      logger("Initializing unit");
+      dynamic newUnit = UnitFactory.createUnit(
+          unitToSpawn["unitType"], unitToSpawn["newID"],
+          unitToSpawn["spawnPosition"], unitToSpawn["unitTeam"]);
+      if (newUnit != null) {
+        world.villages[unitToSpawn["unitTeam"]! - 1].addUnit(newUnit);
+        unitToSpawn["initialized"] = true;
+      }
+    }
+    else{
+      if (unitToSpawn["timeElapsed"] > unitToSpawn["timeToTrain"]){
+        logger("Time to train has passed, now initializing unit");
+        unitToSpawn["fullyTrained"] = true;
+      }
+      else{
+        unitToSpawn["timeElapsed"] += igDeltaInSeconds;
+      }
+    }
+    return 0;
+  }
+  
   int buildBuilding(String uid){
     Duration delta = DateTime.now().difference(tick);
     int igDelta = delta.inMilliseconds*gameSpeed;
@@ -177,25 +243,34 @@ class GameManager{
     Map<String, dynamic> bldToBuild = buildDict[uid]!;
     Building buildingInstance = getBuildingInstance(bldToBuild["buildingTeam"], uid, bldToBuild["buildingType"]);
     if (bldToBuild["readyToBuild"]){
-      double timeToBuild = 3 * bldToBuild["nominalBuildTime"] / (
+      double timeToBuild = 3 * bldToBuild["timeToBuild"] / (
           (buildingInstance.builders) + 2);
       if (bldToBuild["timeElapsed"]> timeToBuild){
+        logger("GameManager | buildBuilding ---Building finished !");
         bldToBuild["built"] = true;
         buildingInstance.health = buildingHealthENUM[buildingInstance.name]!.toDouble();
       }
       else{
         bldToBuild["timeElapsed"] += igDeltaInSeconds;
         buildingInstance.health += igDeltaInSeconds * buildingHealthENUM[buildingInstance.name]! / timeToBuild;
-        logger("Building building");
+        logger("GameManager | buildBuilding --- Building building");
       }
     }
     else{
       List<Unit> buildersInstances = [];
       for (var value in bldToBuild["people"]){
-        getUnitInstance(bldToBuild["buildingTeam"], value, "v");
+         buildersInstances.add(getUnitInstance(bldToBuild["buildingTeam"], value, "v"));
       }
+      logger("builderINSTANCE are $buildersInstances ");
       int presentBuilders = buildersInstances.where((e) => buildingInstance.isInRange(e.position)).length;
       buildingInstance.builders = presentBuilders;
+      if (presentBuilders == bldToBuild["people"].length){
+        logger("GameManager | buildBuilding --- All people on board, ready to build the building");
+        bldToBuild["readyToBuild"] = true;
+      }
+      else{
+        logger("GameManager | buildBuilding --- Waiting for people to come");
+      }
     }
     return 0;
   }

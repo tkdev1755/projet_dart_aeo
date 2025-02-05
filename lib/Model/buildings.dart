@@ -59,7 +59,8 @@ class Building{
   }
 
   bool isInRange((int,int) position){
-    return (position[0]-this.position[0]).abs() <= 1 && (position[1]-this.position[1]).abs();
+    logger("Position is weewee $position");
+    return (position[0]-this.position[0]).abs() <= 1 && (position[1]-this.position[1]).abs() <= 1;
   }
 }
 
