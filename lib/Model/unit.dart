@@ -23,6 +23,7 @@ class Unit{
   int health;
   int damage;
   double speed;
+  int range;
   String task;
   int trainingTime;
   Map<String,int> cost = {};
@@ -35,6 +36,7 @@ class Unit{
       this.position,
       this.health,
       this.damage,
+      this.range,
       this.speed,
       this.task,
       this.trainingTime,
@@ -55,7 +57,7 @@ class Villager extends Unit{
       String uid,
       (int,int) position,
       int team
-      ) : super("v", uid,team, position, 25, 2,0.8, 'I',25,cost: {"f" : 50});
+      ) : super("v", uid,team, position, 25, 2,1,0.8, 'I',25,cost: {"f" : 50});
 
 }
 

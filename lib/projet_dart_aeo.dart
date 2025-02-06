@@ -11,7 +11,7 @@ import 'package:projet_dart_aeo/Model/unit.dart';
 import 'Model/Village.dart';
 import 'package:console/console.dart' as CG;
 
-bool debug = false;
+bool debug = true;
 final console = Console();
 final random = Random();
 int offsetX = 0;
@@ -67,19 +67,24 @@ bool done = false;
 int tests(){
   World world = World(300, 300);
   Village village1 = Village(1, world);
-  logger("Village resources \n ${village1.resources}");
+  Village village2 = Village(2, world);
   village1.addResources("f", 5000);
   village1.addResources("w", 5000);
   village1.addResources("g", 5000);
-  logger("Village resources \n ${village1.resources}");
+  village2.addResources("f", 5000);
+  village2.addResources("w", 5000);
+  village2.addResources("g", 5000);
   String newTcID = village1.getNextUID("b");
-  if (newTcID == ""){
+  String newTCID2 = village2.getNextUID("b");
+  if (newTcID == "" || newTCID2 == ""){
     logger("Object type wasn't ok");
     return -1;
   }
   TownCenter tc1 = TownCenter(newTcID, (15,40), village1.name);
+  TownCenter tc21 = TownCenter(newTCID2, (40,10), village2.name);
   int result = village1.addBuilding(tc1);
-  if (result == -1){
+  int result21 = village2.addBuilding(tc21);
+  if (result == -1 || result21 == -1){
     logger("ERRoR");
     return -1;
   }
@@ -94,23 +99,29 @@ int tests(){
 
   }
   String newVillagerUID = village1.getNextUID("p");
+  String newVillager2UID = village2.getNextUID("p");
   if (newVillagerUID == ""){
     logger("Object type wasn't ok");
     return -1;
   }
   Villager newVillager = Villager(newVillagerUID, (0,2),village1.name);
-  int result3 = village1.addUnit(newVillager);
-  if (result3 < 0){
+  Villager newVillager2 = Villager(newVillager2UID, (39,9), village2.name);
 
+  int result3 = village1.addUnit(newVillager);
+  int result4 = village2.addUnit(newVillager2);
+  if (result3 < 0 || result4 < 0){
   }
   GameManager gm = GameManager(world,DateTime.now());
-  gm.addUnitToMoveDict(newVillager, (3,20));
   String newBuildingID = village1.getNextUID("b");
   TownCenter tc3 = TownCenter(newBuildingID, (4,20),village1.name);
   tc3.health = 0;
   village1.addBuilding(tc3);
-  gm.addBuildingToBuildDict(tc3, [newVillager.uid]);
+  //gm.addBuildingToBuildDict(tc3, [newVillager.uid]);
   gm.addUnitToSpawnDict("v", 1);
+  gm.addUnitToMoveDict(newVillager2, (24,20));
+  gm.addUnitToMoveDict(newVillager, gm.moveDict[newVillager2.uid]!["goal"]);
+  gm.addUnitToAttackDict([newVillager], newVillager2);
+  gm.addUnitToMoveDict(newVillager, (12,20));
   //print(world.reprWorld());
   /*console.clearScreen();
   console.resetCursorPosition();
@@ -217,7 +228,7 @@ gameLoop(World world, GameManager gameManager) async {
     console.rawMode = false;
     console.hideCursor();
     Timer.periodic(const Duration(milliseconds: 200), (t) {
-      draw(world);
+      //draw(world);
       update(world, gameManager);
       gameManager.tick = DateTime.now();
       if (done) quit();

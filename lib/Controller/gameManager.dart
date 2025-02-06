@@ -27,6 +27,7 @@ class GameManager{
   Map<String, Map<String,dynamic>> attackDict = {};
   Map<String, Map<String,dynamic>> buildDict = {};
   Map<String, Map<String, dynamic>> spawnDict = {};
+  List<Unit> unitsToRemove = [];
 
   GameManager(
       this.world,
@@ -55,6 +56,23 @@ class GameManager{
     return world.villages[team-1].community[type][uid];
   }
 
+  int removeDeadUnit(String uid){
+    if (moveDict.containsKey(uid)){
+      moveDict.remove(uid);
+    }
+    if (attackDict.containsKey(uid)){
+      attackDict.remove(uid);
+    }
+    for (var key in buildDict.keys){
+      if (buildDict[key]!["people"].contains(uid)){
+        buildDict[key]!["people"].remove(uid);
+        if (buildDict[key]!["people"].isEmpty()){
+          buildDict.remove(key);
+        }
+      }
+    }
+    return 0;
+  }
   int getTeamNumber(String uid){
     int pIndex = uid.indexOf("p");
     int eqIndex = uid.indexOf("q");
@@ -67,6 +85,8 @@ class GameManager{
     checkUnitToMove();
     checkBuildingToBuild();
     checkUnitToSpawn();
+    checkUnitToAttack();
+    checkUnitToRemove();
     return 0;
   }
   int checkUnitToMove(){
@@ -103,6 +123,23 @@ class GameManager{
     return 0;
   }
 
+  int checkUnitToAttack(){
+    List<dynamic> elementToRemove = [];
+    attackDict.forEach((k,v){
+      if (v["finished"]){
+        elementToRemove.add(k);
+      }
+      else{
+        attackUnit(k);
+      }
+    }
+    );
+    for (var value in elementToRemove){
+      attackDict.remove(value);
+    }
+    return 0;
+  }
+
   int checkUnitToSpawn(){
     List<dynamic> elementToRemove = [];
     spawnDict.forEach((k,v){
@@ -119,6 +156,15 @@ class GameManager{
     }
     return 0;
   }
+
+  int checkUnitToRemove(){
+    for (var value in unitsToRemove){
+      removeDeadUnit(value.uid);
+    }
+    unitsToRemove.clear();
+    return 0;
+  }
+
   int addUnitToMoveDict(Unit unit, (int,int) goal){
     List<(int,int)> barriers = getMapBarriers();
     (int,int) distance = estimateDistance(unit.position, goal);
@@ -174,15 +220,40 @@ class GameManager{
     return 0;
   }
 
+  int addUnitToAttackDict(List<Unit> attackers, dynamic target){
+    (int,int) targetPosition = moveDict.containsKey(target.uid) && (target is Unit) ? moveDict[target.uid]!["goal"] : target.position;
+    if (attackers[0].team == target.team){
+      logger("Friendly fire not allowed");
+      return -1;
+    }
+    else{
+      for (var value in attackers){
+        attackDict[value.uid] = {
+          "attackerTeam" : value.team,
+          "attackerType" : value.name,
+          "targetID" : target.uid,
+          "targetTeam" : target.team,
+          "targetType" : target.name,
+          "targetInRange" : false,
+          "lastHitTime": 0,
+          "targetPosition" : targetPosition,
+          "movingTarget" : target is Unit,
+          "finished" : false,
+        };
+      }
+      return 0;
+    }
+
+  }
+
   int moveUnit(uid){
     Duration delta = DateTime.now().difference(tick);
-    logger(" delta iiiis ? $delta");
     int igDelta = delta.inMicroseconds*gameSpeed;
     double igDeltaInSeconds = igDelta/(pow(10, 6));
     Map<String, dynamic> unitToMove = moveDict[uid]!;
     Unit unitInstance = getUnitInstance(unitToMove["unitTeam"], uid, unitToMove["unitType"]);
     if (moveDict[uid]!["timeElapsed"] >= moveDict[uid]!["timeToTile"]){
-      logger("Unit arrived to its destination");
+      logger("Unit arrived to the next tile");
       moveDict[uid]!["timeElapsed"] = 0;
 
       (int,int) oldPos = moveDict[uid]!["path"][0];
@@ -200,11 +271,50 @@ class GameManager{
       }
     }
     else{
-      logger("Before ---TimeElapsed is ${moveDict[uid]!["timeElapsed"]}");
-      logger("igDelta is $igDelta");
       moveDict[uid]!["timeElapsed"] += igDeltaInSeconds;
-      logger("TimeElapsed is ${moveDict[uid]!["timeElapsed"]}");
     }
+    return 0;
+  }
+
+  int attackUnit(uid){
+    Duration delta = DateTime.now().difference(tick);
+    int igDelta = delta.inMilliseconds*gameSpeed;
+    double igDeltaInSeconds = igDelta/1000;
+    Map<String, dynamic> attackingUnit = attackDict[uid]!;
+    Unit attackerInstance = getUnitInstance(attackingUnit["attackerTeam"], uid, attackingUnit["attackerType"]);
+    dynamic targetInstance = getUnitInstance(attackingUnit["targetTeam"], attackingUnit["targetID"], attackingUnit["targetType"]);
+    (int,int) targetPosition = moveDict.containsKey(targetInstance.uid) && (targetInstance.uid.contains("p")) ? moveDict[attackingUnit["targetID"]]!["goal"] : attackingUnit["targetPosition"];
+    (int,int) updateDistance = estimateDistance(targetPosition,  attackingUnit["targetPosition"]);
+    (int,int) distanceToGoal = estimateDistance(targetPosition, attackerInstance.position);
+    if (targetPosition != attackingUnit["targetPosition"]
+        && (updateDistance[0] > attackerInstance.range && updateDistance[1] > attackerInstance.range)){
+      logger("Target position seems to have changed beyond attacker range");
+      addUnitToMoveDict(attackerInstance, targetPosition);
+    }
+    if (distanceToGoal[0] <= attackerInstance.range && distanceToGoal[1] <= attackerInstance.range){
+      logger("Now in range");
+      attackingUnit["targetInRange"] = true;
+      if (attackingUnit["lastHitTime"] < 1){
+        attackingUnit["lastHitTime"] += igDeltaInSeconds;
+      }
+      else{
+        world.villages[targetInstance.team-1].community[targetInstance.name][targetInstance.uid].health -= attackerInstance.damage;
+        if( world.villages[targetInstance.team-1].community[targetInstance.name][targetInstance.uid].health < 0){
+          logger("Unit is dead ! ");
+          world.villages[targetInstance.team-1].markAsDead(targetInstance);
+          if(targetInstance is Unit){
+            unitsToRemove.add(targetInstance);
+          }
+          attackingUnit["finished"] = true;
+        }
+      }
+    }
+    else{
+      attackingUnit["targetInRange"] = true;
+      logger("not in range");
+
+    }
+
     return 0;
   }
 

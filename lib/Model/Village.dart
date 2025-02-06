@@ -19,7 +19,7 @@ class Village{
   int buildingCount = 0;
   Map<String, Map<String,dynamic>> community = {};
   Map<String, int> resources = {"w" : 0, "g" : 0, "f" : 0};
-
+  Map<String, Map<String,Unit>> deads = {};
   Village(
       this.name,
       this.world,
@@ -111,6 +111,17 @@ class Village{
     }
     deductResources(unit.cost);
     pplCount++;
+    return 0;
+  }
+
+  int markAsDead(Unit unit){
+    community[unit.name]!.remove(unit.uid);
+    world.unitPositions[unit.position]!.remove(unit);
+    if (world.unitPositions[unit.position]!.isEmpty){
+      world.unitPositions.remove(unit.position);
+    }
+    deads.putIfAbsent(unit.name,()=> {});
+    deads[unit.name]![unit.uid] = unit;
     return 0;
   }
 
