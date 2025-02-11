@@ -48,6 +48,14 @@ class Unit{
   String toString() {
     return "${health ==  unitHealthENUM[name]! ? colorMap[team] : colorMap[10]}$name${colorMap[9]}";
   }
+
+  int placeLeft(){
+    return pouch.values.fold(0, (prev, element) => prev + element);
+  }
+
+  bool isFull(){
+    return placeLeft() == 0;
+  }
 }
 
 
@@ -58,6 +66,8 @@ class Villager extends Unit{
       (int,int) position,
       int team
       ) : super("v", uid,team, position, 25, 2,1,0.8, 'I',25,cost: {"f" : 50});
+
+
 
 }
 

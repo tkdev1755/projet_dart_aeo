@@ -3,8 +3,7 @@
 class Resources{
   String name;
   int quantity;
-  Record position;
-
+  (int,int) position;
   Resources(
       this.name,
       this.quantity,

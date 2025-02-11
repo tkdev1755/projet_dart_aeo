@@ -11,7 +11,7 @@ import 'package:projet_dart_aeo/Model/unit.dart';
 import 'Model/Village.dart';
 import 'package:console/console.dart' as CG;
 
-bool debug = true;
+bool debug = false;
 final console = Console();
 final random = Random();
 int offsetX = 0;
@@ -32,7 +32,6 @@ extension RecordIndexing<T1, T2> on (T1, T2) {
         throw RangeError("Invalid index $index for a record of length 2.");
     }
   }
-
 }
 
 
@@ -121,7 +120,6 @@ int tests(){
   gm.addUnitToMoveDict(newVillager2, (24,20));
   gm.addUnitToMoveDict(newVillager, gm.moveDict[newVillager2.uid]!["goal"]);
   gm.addUnitToAttackDict([newVillager], newVillager2);
-  gm.addUnitToMoveDict(newVillager, (12,20));
   //print(world.reprWorld());
   /*console.clearScreen();
   console.resetCursorPosition();
@@ -228,7 +226,7 @@ gameLoop(World world, GameManager gameManager) async {
     console.rawMode = false;
     console.hideCursor();
     Timer.periodic(const Duration(milliseconds: 200), (t) {
-      //draw(world);
+      draw(world);
       update(world, gameManager);
       gameManager.tick = DateTime.now();
       if (done) quit();

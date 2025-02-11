@@ -6,6 +6,7 @@ import 'dart:math';
 
 import 'package:a_star_algorithm/a_star_algorithm.dart';
 import 'package:projet_dart_aeo/Model/buildings.dart';
+import 'package:projet_dart_aeo/Model/resources.dart';
 import 'package:projet_dart_aeo/projet_dart_aeo.dart';
 
 import '../Model/World.dart';
@@ -27,6 +28,7 @@ class GameManager{
   Map<String, Map<String,dynamic>> attackDict = {};
   Map<String, Map<String,dynamic>> buildDict = {};
   Map<String, Map<String, dynamic>> spawnDict = {};
+  Map<String,Map<String,dynamic>> resourceDict = {};
   List<Unit> unitsToRemove = [];
 
   GameManager(
@@ -79,6 +81,13 @@ class GameManager{
     String finalString = uid.substring(eqIndex+1,pIndex);
     logger("Final String is $finalString");
     return int.parse(finalString);
+  }
+
+  double getDelta(){
+    Duration delta = DateTime.now().difference(tick);
+    int igDelta = delta.inMicroseconds*gameSpeed;
+    double igDeltaInSeconds = igDelta/(pow(10, 6));
+    return igDeltaInSeconds;
   }
 
   int checkModifications(){
@@ -165,10 +174,10 @@ class GameManager{
     return 0;
   }
 
-  int addUnitToMoveDict(Unit unit, (int,int) goal){
+  int addUnitToMoveDict(Unit unit, (int,int) goal, {List<(int, int)>? optionalPath}){
     List<(int,int)> barriers = getMapBarriers();
     (int,int) distance = estimateDistance(unit.position, goal);
-    List<(int,int)> path = AStar(rows: world.width, columns: world.height, start: unit.position, end: goal, barriers: barriers).findThePath().toList();
+    List<(int,int)> path = optionalPath ?? AStar(rows: world.width, columns: world.height, start: unit.position, end: goal, barriers: barriers).findThePath().toList();
     if (path.isEmpty && distance[0] >= 1 && distance[1] >= 1){
       logger("Crash while computing path");
       return -1;
@@ -220,6 +229,22 @@ class GameManager{
     return 0;
   }
 
+  int addResourceToCollectDict(Unit unit, Resources selectRes,Building nearDP, int quantity){
+    List<(int,int)> nearDPPath = AStar(rows: world.width, columns: world.height, start: selectRes.position, end: nearDP.position, barriers: getMapBarriers()).findThePath().toList();
+    resourceDict[unit.uid] = {
+      "resPosition" : selectRes.position,
+      "resType" : selectRes.name,
+      "unitTeam" : unit.team,
+      "unitType" : unit.name,
+      "quantity" : quantity,
+      "nearDP": nearDP,
+      "nearDPPath" : nearDPPath,
+      "droppingResources" : true,
+      "collectedResoures" : false,
+    };
+    return 0;
+  }
+
   int addUnitToAttackDict(List<Unit> attackers, dynamic target){
     (int,int) targetPosition = moveDict.containsKey(target.uid) && (target is Unit) ? moveDict[target.uid]!["goal"] : target.position;
     if (attackers[0].team == target.team){
@@ -247,9 +272,7 @@ class GameManager{
   }
 
   int moveUnit(uid){
-    Duration delta = DateTime.now().difference(tick);
-    int igDelta = delta.inMicroseconds*gameSpeed;
-    double igDeltaInSeconds = igDelta/(pow(10, 6));
+    double igDelta = getDelta();
     Map<String, dynamic> unitToMove = moveDict[uid]!;
     Unit unitInstance = getUnitInstance(unitToMove["unitTeam"], uid, unitToMove["unitType"]);
     if (moveDict[uid]!["timeElapsed"] >= moveDict[uid]!["timeToTile"]){
@@ -271,7 +294,7 @@ class GameManager{
       }
     }
     else{
-      moveDict[uid]!["timeElapsed"] += igDeltaInSeconds;
+      moveDict[uid]!["timeElapsed"] += igDelta;
     }
     return 0;
   }
@@ -380,6 +403,33 @@ class GameManager{
       }
       else{
         logger("GameManager | buildBuilding --- Waiting for people to come");
+      }
+    }
+    return 0;
+  }
+
+  int collectResources(String id){
+    //double igDelta = getDelta();
+    Map<String,dynamic> resToCollect = resourceDict[id]!;
+    Unit unitInstance = getUnitInstance(resToCollect["unitTeam"], id, resToCollect["unitType"]);
+    Resources? resInstance = world.resources[resToCollect["resPosition"]];
+    Building dpInstance = resToCollect["nearDP"];
+    if (resInstance == null) {
+      logger("Ressources doesn't exist");
+      return -1;
+    }
+    else {
+      (int,int) resDistance = estimateDistance(unitInstance.position, resInstance.position);
+      if (resDistance[0] <= 1 && resDistance[1]  <= 1){
+        logger("Unit is near resource, start collecting");
+      }
+      else if (unitInstance.isFull()){
+        logger("Unit is full, going back to DP");
+        resToCollect["droppingResources"] = true;
+        addUnitToMoveDict(unitInstance, dpInstance.position, optionalPath: resToCollect["nearDPPath"]);
+      }
+      else{
+        logger("waiting for unit to come to resource");
       }
     }
     return 0;
