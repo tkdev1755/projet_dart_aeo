@@ -51,6 +51,9 @@ class World{
 
     if (tiles.containsKey(element.position)){
       if (tiles[element.position]!.contains == Null){
+        if (element is Resources){
+          resources[element.position] = element;
+        }
         tiles[element.position]!.contains = element;
         return 0;
       }
@@ -61,6 +64,9 @@ class World{
     }
     else{
       tiles[element.position] = Tile(element.position);
+      if (element is Resources){
+        resources[element.position] = element;
+      }
       tiles[element.position]!.contains = element;
       return 0;
     }

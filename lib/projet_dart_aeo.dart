@@ -7,9 +7,12 @@ import 'package:projet_dart_aeo/Controller/gameManager.dart';
 import 'package:projet_dart_aeo/Model/World.dart';
 import 'package:projet_dart_aeo/Model/buildings.dart';
 import 'package:dart_console/dart_console.dart';
+import 'package:projet_dart_aeo/Model/resources.dart';
 import 'package:projet_dart_aeo/Model/unit.dart';
 import 'Model/Village.dart';
 import 'package:console/console.dart' as CG;
+
+import 'Model/randomMap.dart';
 
 bool debug = false;
 final console = Console();
@@ -65,6 +68,7 @@ bool done = false;
 
 int tests(){
   World world = World(300, 300);
+  world = randomWorld({"X" : 300, "Y":300, "t": "g"});
   Village village1 = Village(1, world);
   Village village2 = Village(2, world);
   village1.addResources("f", 5000);
@@ -117,9 +121,14 @@ int tests(){
   village1.addBuilding(tc3);
   //gm.addBuildingToBuildDict(tc3, [newVillager.uid]);
   gm.addUnitToSpawnDict("v", 1);
-  gm.addUnitToMoveDict(newVillager2, (24,20));
-  gm.addUnitToMoveDict(newVillager, gm.moveDict[newVillager2.uid]!["goal"]);
-  gm.addUnitToAttackDict([newVillager], newVillager2);
+  //gm.addUnitToMoveDict(newVillager2, (24,20));
+  //gm.addUnitToMoveDict(newVillager, gm.moveDict[newVillager2.uid]!["goal"]);
+  //gm.addUnitToAttackDict([newVillager], newVillager2);
+  Resources res = Resources("w", 200, (23,23));
+  world.addElement(res);
+  (int,int) resPosition = gm.addResourceToCollectDict(newVillager, res, tc1, 10);
+  gm.addUnitToMoveDict(newVillager, resPosition);
+
   //print(world.reprWorld());
   /*console.clearScreen();
   console.resetCursorPosition();
@@ -226,7 +235,9 @@ gameLoop(World world, GameManager gameManager) async {
     console.rawMode = false;
     console.hideCursor();
     Timer.periodic(const Duration(milliseconds: 200), (t) {
-      draw(world);
+      if (!debug){
+        draw(world);
+      }
       update(world, gameManager);
       gameManager.tick = DateTime.now();
       if (done) quit();

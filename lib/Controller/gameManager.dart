@@ -89,13 +89,17 @@ class GameManager{
     double igDeltaInSeconds = igDelta/(pow(10, 6));
     return igDeltaInSeconds;
   }
-
+  List<(int,int)> getEmptyTile((int,int) pos){
+    List<(int,int)> adjacentPositions = [(pos[0]-1,pos[1]-1),(pos[0]+1,pos[1]+1),(pos[0]-1,pos[1]),(pos[0]+1,pos[1]),(pos[0],pos[1]-1),(pos[0],pos[1]+1),(pos[0]-1,pos[1]+1),(pos[0]+1,pos[1]-1)];
+    return adjacentPositions.where((e) => (!world.tiles.containsKey(e) || world.tiles[e]!.contains == null)).toList();
+  }
   int checkModifications(){
     checkUnitToMove();
     checkBuildingToBuild();
     checkUnitToSpawn();
     checkUnitToAttack();
     checkUnitToRemove();
+    checkResourceToCollect();
     return 0;
   }
   int checkUnitToMove(){
@@ -165,7 +169,19 @@ class GameManager{
     }
     return 0;
   }
-
+  int checkResourceToCollect(){
+    List<dynamic> elementToRemove = [];
+    resourceDict.forEach((k,v){
+      if (v["collectedResources"]){
+        elementToRemove.add(k);
+      }
+      else{
+        collectResources(k);
+      }
+    }
+    );
+    return 0;
+  }
   int checkUnitToRemove(){
     for (var value in unitsToRemove){
       removeDeadUnit(value.uid);
@@ -177,6 +193,9 @@ class GameManager{
   int addUnitToMoveDict(Unit unit, (int,int) goal, {List<(int, int)>? optionalPath}){
     List<(int,int)> barriers = getMapBarriers();
     (int,int) distance = estimateDistance(unit.position, goal);
+    if (optionalPath == null){
+      logger("No optionnal path");
+    }
     List<(int,int)> path = optionalPath ?? AStar(rows: world.width, columns: world.height, start: unit.position, end: goal, barriers: barriers).findThePath().toList();
     if (path.isEmpty && distance[0] >= 1 && distance[1] >= 1){
       logger("Crash while computing path");
@@ -229,20 +248,31 @@ class GameManager{
     return 0;
   }
 
-  int addResourceToCollectDict(Unit unit, Resources selectRes,Building nearDP, int quantity){
-    List<(int,int)> nearDPPath = AStar(rows: world.width, columns: world.height, start: selectRes.position, end: nearDP.position, barriers: getMapBarriers()).findThePath().toList();
+  (int,int) addResourceToCollectDict(Unit unit, Resources selectRes,Building nearDP, int quantity){
+    (int,int)? nearDpPos = getEmptyTile(nearDP.position).firstOrNull;
+    (int,int)? resourcePos = getEmptyTile(selectRes.position).firstOrNull;
+    if (resourcePos == null || nearDpPos == null){
+      logger("Enclaved building or resource, impossible to get to");
+      return (-1,-1);
+    }
+
+    List<(int,int)> nearDPPath = AStar(rows: world.width, columns: world.height, start: resourcePos, end: nearDpPos, barriers: getMapBarriers()).findThePath().toList();
+    logger("while adding resCollect had this path $nearDPPath");
     resourceDict[unit.uid] = {
       "resPosition" : selectRes.position,
+      "resEstimatedPosition" : resourcePos,
       "resType" : selectRes.name,
       "unitTeam" : unit.team,
       "unitType" : unit.name,
       "quantity" : quantity,
-      "nearDP": nearDP,
+      "timeElapsed" : 0,
+      "timeToFillPouch" : (unit.placeLeft()) * 60 / 25,
+      "nearDPPos": nearDpPos,
       "nearDPPath" : nearDPPath,
-      "droppingResources" : true,
-      "collectedResoures" : false,
+      "droppingResources" : false,
+      "collectedResources" : false,
     };
-    return 0;
+    return resourcePos;
   }
 
   int addUnitToAttackDict(List<Unit> attackers, dynamic target){
@@ -277,8 +307,9 @@ class GameManager{
     Unit unitInstance = getUnitInstance(unitToMove["unitTeam"], uid, unitToMove["unitType"]);
     if (moveDict[uid]!["timeElapsed"] >= moveDict[uid]!["timeToTile"]){
       logger("Unit arrived to the next tile");
+      logger("path is ${moveDict[uid]!["path"]}");
+      print("Goal is ${moveDict[uid]!["goal"]}");
       moveDict[uid]!["timeElapsed"] = 0;
-
       (int,int) oldPos = moveDict[uid]!["path"][0];
       (moveDict[uid]!["path"] as List<(int,int)>).removeAt(0);
       if (moveDict[uid]!["nextTile"] == moveDict[uid]!["goal"]){
@@ -409,24 +440,65 @@ class GameManager{
   }
 
   int collectResources(String id){
-    //double igDelta = getDelta();
+    double igDelta = getDelta();
     Map<String,dynamic> resToCollect = resourceDict[id]!;
     Unit unitInstance = getUnitInstance(resToCollect["unitTeam"], id, resToCollect["unitType"]);
     Resources? resInstance = world.resources[resToCollect["resPosition"]];
-    Building dpInstance = resToCollect["nearDP"];
+    (int,int) dpPos = resToCollect["nearDPPos"];
     if (resInstance == null) {
-      logger("Ressources doesn't exist");
+      logger("Resources doesn't exist");
       return -1;
     }
     else {
       (int,int) resDistance = estimateDistance(unitInstance.position, resInstance.position);
-      if (resDistance[0] <= 1 && resDistance[1]  <= 1){
+      if (resDistance[0] <= 1 && resDistance[1]  <= 1 && !resToCollect["droppingResources"]){
         logger("Unit is near resource, start collecting");
+        resToCollect["timeElapsed"] = resToCollect["timeElapsed"]+ igDelta;
+        if (resToCollect["timeElapsed"] >= 2.4){
+          logger("Added one ${resInstance.name} to unit ${unitInstance.uid} pouch");
+          unitInstance.pouch[resInstance.name] = unitInstance.pouch[resInstance.name]! + 1;
+          if (resInstance.quantity != 0){
+            resToCollect["quantity"] = resToCollect["quantity"] - 1;
+            world.resources[resInstance.position]!.quantity --;
+            world.tiles[resInstance.position]!.contains.quantity --;
+          }
+          else if (resToCollect["quantity"] == 0){
+            resToCollect["collectedResoures"] = true;
+          }
+          else{
+            world.resources.remove(resInstance.position);
+            world.tiles.remove(resInstance.position);
+            resToCollect["collectedResoures"] = true;
+          }
+
+          resToCollect["timeElapsed"] = 0;
+        }
+        if (unitInstance.isFull()){
+          logger("Unit is full, going back to DP");
+          resToCollect["droppingResources"] = true;
+          addUnitToMoveDict(unitInstance, resToCollect["nearDPPos"], optionalPath: List.from(resToCollect["nearDPPath"]));
+        }
+        if (resToCollect["quantity"] == 0){
+          resToCollect["collectedResources"] = true;
+        }
+        if (resInstance.quantity == 0){
+          resToCollect["collectedResources"] = true;
+          logger("No more res");
+        }
       }
-      else if (unitInstance.isFull()){
-        logger("Unit is full, going back to DP");
-        resToCollect["droppingResources"] = true;
-        addUnitToMoveDict(unitInstance, dpInstance.position, optionalPath: resToCollect["nearDPPath"]);
+      else if (resToCollect["droppingResources"]){
+        (int,int) dpDistance= estimateDistance(unitInstance.position, dpPos);
+        if (dpDistance[0] <= 1 && dpDistance[1]  <= 1){
+          logger("Arrived to drop point, dropping resources");
+          world.villages[unitInstance.team-1].addResources(resToCollect["resType"],unitInstance.pouch[resToCollect["resType"]]!);
+          unitInstance.pouch[resToCollect["resType"]] = 0;
+          if (resToCollect["quantity"] != 0 || resInstance.quantity != 0){
+            List<(int,int)> dpPath = List.from(resToCollect["nearDPPath"]);
+            logger("dp path is $dpPath");
+            addUnitToMoveDict(unitInstance, resToCollect["resEstimatedPosition"], optionalPath: dpPath.reversed.toList());
+            resToCollect["droppingResources"] = false;
+          }
+        }
       }
       else{
         logger("waiting for unit to come to resource");

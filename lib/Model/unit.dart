@@ -50,11 +50,12 @@ class Unit{
   }
 
   int placeLeft(){
+
     return pouch.values.fold(0, (prev, element) => prev + element);
   }
 
   bool isFull(){
-    return placeLeft() == 0;
+    return 20-placeLeft() == 0;
   }
 }
 
