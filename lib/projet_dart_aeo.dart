@@ -4,8 +4,8 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:projet_dart_aeo/Controller/gameManager.dart';
+import 'package:projet_dart_aeo/Controller/terminalController.dart';
 import 'package:projet_dart_aeo/Model/World.dart';
-import 'package:projet_dart_aeo/Model/buildings.dart';
 import 'package:dart_console/dart_console.dart';
 import 'package:projet_dart_aeo/Model/resources.dart';
 import 'package:projet_dart_aeo/Model/unit.dart';
@@ -14,7 +14,6 @@ import 'package:console/console.dart' as CG;
 
 import 'Model/randomMap.dart';
 
-bool debug = false;
 final console = Console();
 final random = Random();
 int offsetX = 0;
@@ -65,25 +64,27 @@ Map<int, CG.Color> colorMap = {
 
 final buffer = StringBuffer();
 bool done = false;
+bool debug = false;
 
 int tests(){
-  World world = World(300, 300);
-  world = randomWorld({"X" : 300, "Y":300, "t": "g"});
+  World world = randomWorld({"X" : 120, "Y":120, "t": "g", "n" : 2});
+  Map<String, int> generalRessources = {"f" : 5000, "w":5000,"g":5000};
   Village village1 = Village(1, world);
   Village village2 = Village(2, world);
-  village1.addResources("f", 5000);
-  village1.addResources("w", 5000);
-  village1.addResources("g", 5000);
-  village2.addResources("f", 5000);
-  village2.addResources("w", 5000);
-  village2.addResources("g", 5000);
+  for (var village in world.villages){
+    village.loadResources(generalRessources);
+  }
+  village2.loadResources(generalRessources);
+
   String newTcID = village1.getNextUID("b");
   String newTCID2 = village2.getNextUID("b");
   if (newTcID == "" || newTCID2 == ""){
     logger("Object type wasn't ok");
     return -1;
   }
-  TownCenter tc1 = TownCenter(newTcID, (15,40), village1.name);
+
+  placeTcs({"n" : 2}, world);
+  /*TownCenter tc1 = TownCenter(newTcID, (15,40), village1.name);
   TownCenter tc21 = TownCenter(newTCID2, (40,10), village2.name);
   int result = village1.addBuilding(tc1);
   int result21 = village2.addBuilding(tc21);
@@ -100,7 +101,7 @@ int tests(){
   int result2 = village1.addBuilding(tc2);
   if (result2 <0){
 
-  }
+  }*/
   String newVillagerUID = village1.getNextUID("p");
   String newVillager2UID = village2.getNextUID("p");
   if (newVillagerUID == ""){
@@ -115,10 +116,9 @@ int tests(){
   if (result3 < 0 || result4 < 0){
   }
   GameManager gm = GameManager(world,DateTime.now());
-  String newBuildingID = village1.getNextUID("b");
-  TownCenter tc3 = TownCenter(newBuildingID, (4,20),village1.name);
-  tc3.health = 0;
-  village1.addBuilding(tc3);
+  //TownCenter tc3 = TownCenter(newBuildingID, (4,20),village1.name);
+  //tc3.health = 0;
+  //village1.addBuilding(tc3);
   //gm.addBuildingToBuildDict(tc3, [newVillager.uid]);
   gm.addUnitToSpawnDict("v", 1);
   //gm.addUnitToMoveDict(newVillager2, (24,20));
@@ -126,8 +126,8 @@ int tests(){
   //gm.addUnitToAttackDict([newVillager], newVillager2);
   Resources res = Resources("w", 200, (23,23));
   world.addElement(res);
-  (int,int) resPosition = gm.addResourceToCollectDict(newVillager, res, tc1, 10);
-  gm.addUnitToMoveDict(newVillager, resPosition);
+  //(int,int) resPosition = gm.addResourceToCollectDict(newVillager, res, tc1, 10);
+  //gm.addUnitToMoveDict(newVillager, resPosition);
 
   //print(world.reprWorld());
   /*console.clearScreen();
@@ -149,6 +149,7 @@ void resetConsole() {
   console.rawMode = false;
 }
 
+
 void draw(World world){
   console.clearScreen();
   buffer.clear();
@@ -156,7 +157,6 @@ void draw(World world){
     buffer.write(world.reprWorld(row+offsetY,offsetX));
     buffer.write(console.newLine);
   }
-
   console.write(buffer.toString());
 }
 
@@ -170,7 +170,7 @@ void quit() {
   exit(0);
 }
 
-readInput(List<int> args, GameManager gameManager) {
+readInput(List<int> args, GameManager gameManager, TerminalController tmc) {
   Stream<String> upStream = CG.Keyboard.bindKey('up');
   Stream<String> downStream = CG.Keyboard.bindKey('down');
   Stream<String> rightStream = CG.Keyboard.bindKey('right');
@@ -178,7 +178,8 @@ readInput(List<int> args, GameManager gameManager) {
   Stream<String> plusStream =CG.Keyboard.bindKey('+');
   Stream<String> minusStream =CG.Keyboard.bindKey('-');
   Stream<String> escStream =CG.Keyboard.bindKey('esc');
-
+  Stream<String> pauseStream = CG.Keyboard.bindKey('p');
+  Stream<String> statStream = CG.Keyboard.bindKey('s');
   downStream.listen((_) {
     if (offsetY+console.windowHeight >= args[0]){
 
@@ -222,22 +223,50 @@ readInput(List<int> args, GameManager gameManager) {
     print("escaping game");
     exit(0);
   });
+  pauseStream.listen((event){
+    print("Pausing game");
+    tmc.pauseGame();
+  });
+  statStream.listen((event){
+    print("Stating game");
+    resetConsole();
+    tmc.showRes = !(tmc.showRes);
+  });
 }
 
 gameLoop(World world, GameManager gameManager) async {
-
+  TerminalController termController = TerminalController(debug, false,false, true, false);
   CG.Keyboard.init();
   List<int> args = [world.height, world.width];
   console.rawMode = false;
   console.hideCursor();
-  readInput(args, gameManager);
+  readInput(args, gameManager,termController);
+  int statNumber = 0;
   try {
     console.rawMode = false;
     console.hideCursor();
     Timer.periodic(const Duration(milliseconds: 200), (t) {
-      if (!debug){
-        draw(world);
+      if (termController.running){
+        if (!termController.debug && !termController.showRes){
+          statNumber = 0;
+          draw(world);
+        }
+        else if (!termController.debug && termController.showRes){
+          if (statNumber < world.villages.length){
+            for (var villages in world.villages){
+              print(villages.getStatus());
+              statNumber++;
+            }
+
+          }
+        }
       }
+      else{
+        if (termController.pause){
+          print("Game Paused");
+        }
+      }
+
       update(world, gameManager);
       gameManager.tick = DateTime.now();
       if (done) quit();

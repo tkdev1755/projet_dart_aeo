@@ -13,7 +13,7 @@ class World{
   int height;
   Map<(int,int), Tile> tiles = {};
   Map<(int,int), List<Unit>> unitPositions = {};
-  Map<(int,int), Resources> resources = {};
+  Map<String,Map<(int,int), Resources>> resources = {};
   List villages = [];
 
   World(
@@ -50,9 +50,10 @@ class World{
     }
 
     if (tiles.containsKey(element.position)){
-      if (tiles[element.position]!.contains == Null){
+      if (tiles[element.position]!.contains == null){
         if (element is Resources){
-          resources[element.position] = element;
+          resources.putIfAbsent(element.name, ()=>{});
+          resources[element.name]![element.position] = element;
         }
         tiles[element.position]!.contains = element;
         return 0;
@@ -65,7 +66,8 @@ class World{
     else{
       tiles[element.position] = Tile(element.position);
       if (element is Resources){
-        resources[element.position] = element;
+        resources.putIfAbsent(element.name, ()=>{});
+        resources[element.name]![element.position] = element;
       }
       tiles[element.position]!.contains = element;
       return 0;
@@ -128,16 +130,22 @@ class World{
     return true;
   }
 
+  Village getVillage(int teamNumber){
+    if (teamNumber-1 >villages.length){
+      throw Exception("Village out of bounds");
+    }
+    return villages[teamNumber-1];
+  }
+
 
   String reprWorld(int y ,int offsetX){
     String fString = "";
     for (int x=0+offsetX; x<=(console.windowWidth<width ? console.windowWidth : width)-1; x++){
-      if (tiles.containsKey((x,y)) && tiles[(x,y)]!.contains != null) {
-        fString += tiles[(x,y)]!.contains.toString();
+      if (tiles.containsKey((x+offsetX,y)) && tiles[(x+offsetX,y)]!.contains != null) {
+        fString += tiles[(x+offsetX,y)]!.contains.toString();
       }
-      else if (unitPositions.containsKey((x,y)) && unitPositions[(x,y)]!.isNotEmpty){
-        fString += unitPositions[(x,y)]![0].toString();
-
+      else if (unitPositions.containsKey((x+offsetX,y)) && unitPositions[(x+offsetX,y)]!.isNotEmpty){
+        fString += unitPositions[(x+offsetX,y)]![0].toString();
       }
       else {
         fString += " ";

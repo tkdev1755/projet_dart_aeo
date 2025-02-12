@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:projet_dart_aeo/projet_dart_aeo.dart';
 import 'package:projet_dart_aeo/Model/resources.dart';
+import 'Village.dart';
+import 'buildings.dart';
 import 'tile.dart';
 import 'World.dart';
 
@@ -29,7 +31,8 @@ void cluster(World world, Resources resource, (int,int) key,
 
     if (key[0] >= 0 && key[1] < world.width && key[1] >= 0 && key[1] < world.height) {
       world.tiles[key] = Tile(key)..contains = newResource;
-      world.resources.putIfAbsent(key, () => newResource!);
+      world.resources.putIfAbsent(newResource.name, ()=>{});
+      world.resources[newResource.name]!.putIfAbsent(key, () => newResource!);
 
       for (var i = -1; i <= 1; i++) {
         for (var j = -1; j <= 1; j++) {
@@ -63,3 +66,114 @@ World randomWorld(Map<String, dynamic> dict) {
   }
   return newWorld;
 }
+
+/*void placeBuildings(World world, List<Building> buildings) {
+  var rng = Random();
+  List<(int, int)> townCenterPositions = [];
+  int maxAttempts = 1000;
+
+  for (var building in buildings) {
+    int attempts = 0;
+    bool placed = false;
+
+    while (attempts < maxAttempts && !placed) {
+      int x = rng.nextInt(world.width);
+      int y = rng.nextInt(world.height);
+      var key = (x, y);
+
+      if (isPositionValid(world, x, y)) {
+        if (building.type == "TownCenter") {
+          bool tooClose = townCenterPositions.any((pos) =>
+          (pos.$1 - x).abs() + (pos.$2 - y).abs() < world.width ~/ world.villages.length);
+          if (tooClose) {
+            attempts++;
+            continue;
+          }
+          townCenterPositions.add(key);
+        }
+
+        world.tilesDico[key] = Tile()..contains = building;
+        placed = true;
+      }
+      attempts++;
+    }
+  }
+}*/
+
+
+
+void placeTcs(Map<String, dynamic> dict, World world) {
+  final random = Random();
+  int x = random.nextInt(world.width ~/ 3 - 24) + 12;
+  int y = random.nextInt(world.height ~/ 3 - 24) + 12;
+
+  // Clear space
+  for (int j = y - 8; j < y + 20; j++) {
+    for (int i = x - 8; i < x + 20; i++) {
+      world.tiles.remove((i, j));
+      world.tiles.remove((world.width - i, world.height - j));
+
+      if (dict["n"] >= 3) {
+        world.tiles.remove((i, world.height - j));
+      }
+      if (dict["n"] >= 4) {
+        world.tiles.remove((world.width - i, j));
+      }
+      if (dict["n"] >= 5) {
+        world.tiles.remove((world.width ~/ 2 - i, j));
+      }
+      if (dict["n"] >= 6) {
+        world.tiles.remove((world.width ~/ 2 - i, world.height - j));
+      }
+      if (dict["n"] >= 7) {
+        world.tiles.remove((i, world.height ~/ 2 - j));
+      }
+      if (dict["n"] >= 8) {
+        world.tiles.remove((world.width - i, world.height ~/ 2 - j));
+      }
+    }
+  }
+
+  // Place Town Centers
+  logger("number of villages is ${dict["n"]}");
+  for (int i = 0; i < dict["n"]; i++) {
+    Village village = world.getVillage(i+1);
+    String uid = village.getNextUID("b");
+    TownCenter tc = TownCenter(uid, (0,0), village.name);
+    (int,int) pos;
+    switch (i) {
+      case 0:
+        pos = (x + 4, y + 4);
+        break;
+      case 1:
+        pos = (world.width - x - 6, world.height - y - 6);
+        break;
+      case 2:
+        pos = (x + 4, world.height - y - 6);
+        break;
+      case 3:
+        pos = (world.width - x - 6, y + 4);
+        break;
+      case 4:
+        pos = (world.width ~/ 2, y + 4);
+        break;
+      case 5:
+        pos = (world.width ~/ 2, world.height - y - 6);
+        break;
+      case 6:
+        pos = (x + 4, world.height ~/ 2);
+        break;
+      case 7:
+        pos = (world.width - x - 6, world.height ~/ 2);
+        break;
+      default:
+        pos = (x, y);
+    }
+    logger("Final TC position is ${pos}");
+
+    tc.position = pos;
+    village.addBuilding(tc, overrideCost: true);
+  }
+}
+
+

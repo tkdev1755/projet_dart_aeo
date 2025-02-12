@@ -83,6 +83,5 @@ class TownCenter extends Building {
     cost: {"w" : 350}
   );
 
-
 }
 

@@ -70,24 +70,42 @@ class Village{
       return 0;
     }
   }
+  int loadResources(Map<String, int> dict){
+    for (var value in dict.keys){
+      resources[value] = dict[value]!;
+    }
+    return 0;
+  }
   
-  int addBuilding(Building building){
+  int addBuilding(Building building, {bool? overrideCost}){
+
+    if (overrideCost != null && overrideCost){
+      if (community.containsKey(building.name)){
+        community[building.name]![building.uid] = building;
+      }
+      else{
+        community[building.name] ={};
+        community[building.name]![building.uid] = building;
+      }
+    }
+    else{
+      if (!canAfford(building.cost)) {
+        logger("Can't afford building");
+        return -1;
+      }
+      if (community.containsKey(building.name)){
+        community[building.name]![building.uid] = building;
+      }
+      else{
+        community[building.name] ={};
+        community[building.name]![building.uid] = building;
+      }
+
+    }
     int addResult = world.addElement(building);
     if (addResult == -1){
       return -1;
     }
-    if (!canAfford(building.cost)) {
-      logger("Can't afford building");
-      return -1;
-    }
-    if (community.containsKey(building.name)){
-      community[building.name]![building.uid] = building;
-    }
-    else{
-      community[building.name] ={};
-      community[building.name]![building.uid] = building;
-    }
-    deductResources(building.cost);
     buildingCount++;
     return 0;
   }
@@ -134,5 +152,16 @@ class Village{
       resources[value.key] = resources[value.key]! - value.value;
     }
     return 1;
+  }
+
+
+  String getStatus(){
+    String fString = "";
+    int allUnits = (community["a"]?.length ?? 0) + (community["h"]?.length ?? 0) + (community["s"]?.length ?? 0)+ (community["v"]?.length ?? 0);
+    fString += "Village ${name} - \n";
+    fString += "Nombre d'unités ${allUnits}, Nombre de morts ${deads.length} \n";
+    fString += "Ressources : \n Wood : ${resources["w"]} \t Gold ${resources["g"]} \t Food : ${resources["f"]}";
+
+    return fString;
   }
 }

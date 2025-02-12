@@ -443,7 +443,7 @@ class GameManager{
     double igDelta = getDelta();
     Map<String,dynamic> resToCollect = resourceDict[id]!;
     Unit unitInstance = getUnitInstance(resToCollect["unitTeam"], id, resToCollect["unitType"]);
-    Resources? resInstance = world.resources[resToCollect["resPosition"]];
+    Resources? resInstance = world.resources[resToCollect["resType"]]?[resToCollect["resPosition"]];
     (int,int) dpPos = resToCollect["nearDPPos"];
     if (resInstance == null) {
       logger("Resources doesn't exist");
@@ -459,14 +459,14 @@ class GameManager{
           unitInstance.pouch[resInstance.name] = unitInstance.pouch[resInstance.name]! + 1;
           if (resInstance.quantity != 0){
             resToCollect["quantity"] = resToCollect["quantity"] - 1;
-            world.resources[resInstance.position]!.quantity --;
+            world.resources[resToCollect["resType"]]![resInstance.position]!.quantity --;
             world.tiles[resInstance.position]!.contains.quantity --;
           }
           else if (resToCollect["quantity"] == 0){
             resToCollect["collectedResoures"] = true;
           }
           else{
-            world.resources.remove(resInstance.position);
+            world.resources[resToCollect["resType"]]!.remove(resInstance.position);
             world.tiles.remove(resInstance.position);
             resToCollect["collectedResoures"] = true;
           }
