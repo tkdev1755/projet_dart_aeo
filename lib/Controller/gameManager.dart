@@ -507,4 +507,39 @@ class GameManager{
     return 0;
   }
 
+  bool checkBuildingStatus(String id){
+    if (buildDict.containsKey(id)){
+      return buildDict[id]!["built"];
+    }
+    else{
+      return true;
+    }
+  }
+
+  bool checkAttackStatus(String id){
+    if (attackDict.containsKey(id)){
+      return attackDict[id]!["success"];
+    }
+    else{
+      return true;
+    }
+  }
+
+  bool checkResourceStatus(String id){
+    if (resourceDict.containsKey(id)){
+      return resourceDict[id]!["collectedResources"];
+    }
+    else{
+      return true;
+    }
+  }
+
+  bool checkSpawnStatus(String id){
+    if (spawnDict.containsKey(id)){
+      return resourceDict[id]!["fullyTrained"];
+    }
+    else{
+      return true;
+    }
+  }
 }

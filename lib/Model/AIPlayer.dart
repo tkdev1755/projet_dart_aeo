@@ -1,12 +1,107 @@
 
 
+
 import 'package:projet_dart_aeo/Controller/gameManager.dart';
 import 'package:projet_dart_aeo/Model/buildings.dart';
 import 'package:projet_dart_aeo/Model/resources.dart';
+import 'package:projet_dart_aeo/Model/unit.dart';
+import 'package:projet_dart_aeo/projet_dart_aeo.dart';
 
 import 'Village.dart';
 import 'World.dart';
 
+enum PlayStyle {
+  Aggressive,
+  Passive,
+  Defensive,
+}
+
+const Map<PlayStyle, List<List<int>>> playStyleMatrix = {
+  PlayStyle.Aggressive: [
+    [2, 2, 0],
+    [6, 10, 4],
+    [3, 4, 8]
+  ],
+  PlayStyle.Passive: [
+    [6, 20, 0],
+    [2, 2, 0],
+    [1, 12, 2]
+  ],
+  PlayStyle.Defensive: [
+    [9, 1, 9],
+    [2, 8, 2],
+    [1, 4, 0]
+  ]
+};
+
+enum BuildingType {
+  T, A, B, C, F, H, K, S
+}
+
+const Map<String, String> buildingENUM = {
+  "T": "TownCenter",
+  "A": "ArcheryRange",
+  "B": "Barracks",
+  "C": "Camp",
+  "F": "Farm",
+  "H": "House",
+  "K": "Keep",
+  "S": "Stable"
+};
+
+
+enum UnitType {
+  a, h, v, s
+}
+
+
+const Map<String, Map<String, int>> buildingCostENUM = {
+  "T": {"w": 350},
+  "A": {"w": 175},
+  "B": {"w": 175},
+  "C": {"w": 100},
+  "F": {"w": 60},
+  "H": {"w": 25},
+  "K": {"w": 35, "g": 125},
+  "S": {"w": 175}
+};
+
+
+const Map<String, String> resourceTypeENUM = {
+  "w" : "Wood",
+  "g": "Gold",
+  "f": "Food"
+};
+
+const Map<UnitType, int> unitTimeENUM = {
+  UnitType.a: 35,
+  UnitType.h: 30,
+  UnitType.s: 20,
+  UnitType.v: 25
+};
+
+
+
+
+const Map<String, List<String>> buildingTypeENUM = {
+  "Military": ["Barracks", "Stable", "ArcheryRange"],
+  "Village": ["House", "TownCenter"],
+  "Farming": ["Farm", "Camp"],
+  "DropPoints": ["T", "C"]
+};
+
+const Map<String, List<String>> unitTypeENUM = {
+  "Military": ["Archer", "Swordsman", "Horseman"],
+  "Village": ["Villager"],
+  "Farming": ["Villager"]
+};
+
+const Map<UnitType, Map<String, int>> unitCostENUM = {
+  UnitType.a: {"w": 25, "g": 45},
+  UnitType.h: {"f": 80, "g": 20},
+  UnitType.s: {"f": 50, "20": 20},
+  UnitType.v: {"f": 50}
+};
 class Playstyle{
 
     List<List<int>> playStyleMatrix;
@@ -133,9 +228,9 @@ class AIPlayer{
     return {ressourceKeys[nearestIndex]: resources[ressourceKeys[nearestIndex]]!};
   }
 
-  dynamic getNearestDropPoint(Map<String, (int, int)> resource) {
+  dynamic getNearestDropPoint(Map<(int,int), Resources> resource) {
     var dpKeys = village.community["T"]?.keys.toList() ?? [];
-    var dropPoints = village.community["T"]?.values.map((dp) => estimateDistance(dp.position.toRecord(), resource.values.first)).toList() ?? [];
+    var dropPoints = village.community["T"]?.values.map((dp) => estimateDistance(dp.position.toRecord(), resource.keys.first)).toList() ?? [];
 
     if (dropPoints.isEmpty) return -1;
 
@@ -143,6 +238,468 @@ class AIPlayer{
     return village.community["T"]?[dpKeys[nearestIndex]];
   }
 
+  int getOptimalBuildingCurve(String buildingType) {
+    return 3;
+  }
+
+  int getFreePplCount() {
+    return (freeUnits["v"]?.length ?? 0) + (freeUnits["s"]?.length ?? 0) +
+        (freeUnits["h"]?.length ?? 0) + (freeUnits["a"]?.length ?? 0);
+  }
+
+  bool isOutOfBound((int, int) position) {
+    return (position.$1 < 0 || position.$1 > world.width) ||
+        (position.$2 < 0 || position.$2 > world.height);
+  }
+
+  List<String> getFreePeople(int number, String type) {
+    return freeUnits[type]?.sublist(0, number) ?? [];
+  }
+
+  bool checkIfTilesAreOccupied((int, int) size, (int, int) position) {
+    for (var tile in getOccupiedTiles(size, position)) {
+      if (world.tiles.containsKey(tile)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<(int, int)> getOccupiedTiles((int, int) size, (int, int) position) {
+    return [
+      for (int x = 0; x < size.$1; x++)
+        for (int y = 0; y < size.$2; y++)
+          (position.$1 + x, position.$2 + y)
+    ];
+  }
+
+  (int, int)? findLocationContour((int, int) size) {
+    int w = size.$1 + 1;
+    int h = size.$2 + 1;
+    Set<(int, int)> candidates = {};
+    List<dynamic> allBuildings = [];
+
+    for (var buildingType in buildingENUM.keys) {
+      allBuildings.addAll(village.community[buildingType]?.values ?? []);
+    }
+
+    for (var building in allBuildings) {
+      var (bx, by) = building.position;
+      var (bw, bh) = (building.surface.$1, building.surface.$2);
+      candidates.addAll({
+        (bx - w, by), (bx + bw, by), (bx, by - h), (bx, by + bh)
+      });
+    }
+
+    for (var (x, y) in candidates) {
+      if (!checkIfTilesAreOccupied(size, (x, y))) {
+        return (x, y);
+      }
+    }
+    return null;
+  }
+
+  (int, int)? getBuildTarget((int, int) size, [int tries = 0]) {
+    var selectedPos = findLocationContour(size);
+    if (selectedPos != null) {
+      return selectedPos;
+    }
+
+    // If no positions are found, expand the village
+    print("AIPlayer | getBuildTarget---- Time to expand village border");
+
+    return null;
+  }
+
+  dynamic getBuildingActionDict(String buildingType) {
+    String villagerType = "v";
+    List<String> idList = getFreePeople(getOptimalBuildingCurve("1"), villagerType);
+    if (idList.isEmpty) {
+      print("LISTE D'UNITES LIBRE VIDE !!!!");
+      return -1;
+    }
+
+    for (var i in idList) {
+      freeUnits[villagerType]?.remove(i);
+    }
+
+    var buildTarget = getBuildTarget((BuildingFactory.getSize(buildingType))!);
+    if (buildTarget == null) {
+      return -1;
+    }
+
+    return {
+      "action": "Build",
+      "people": idList,
+      "status": "pending",
+      "infos": {
+        "type": buildingType,
+        "target": buildTarget,
+      }
+    };
+  }
+
+  Map<String, dynamic> getResourcesActionDict(Map<(int,int), Resources> resourceToCollect, String type, dynamic nearestDP) {
+    logger("AIPlayer | getResourcesActionDict--- restoCollectVariable : $resourceToCollect");
+
+    if (resourceToCollect.isEmpty) {
+      throw Exception("No resources to collect");
+    }
+
+    (int,int) resKey = resourceToCollect.keys.first;
+    Resources resourceInstance = world.resources[type]![resKey]!;
+
+    List<String> unitID = getFreePeople(1, "v");
+
+    if (unitID.isEmpty) {
+      Map<String, dynamic> errorDict = {
+        "action": "collectResource",
+        "infos": {
+          "type": type,
+          "target": "ERROR",
+          "targetKey": "ERRORR",
+        }
+      };
+      throw Exception(errorDict);
+    }
+
+    for (var i in unitID) {
+      freeUnits["v"]?.remove(i);
+    }
+
+    return {
+      "action": "collectResource",
+      "people": unitID,
+      "status": "pending",
+      "infos": {
+        "type": type,
+        "target": resourceInstance.position,
+        "targetKey": resKey,
+        "nearestDP": nearestDP,
+        "quantity": resourceInstance.quantity,
+      }
+    };
+  }
+
+  Map<String, dynamic> getHumanActionDict(List<String> units, String type, Unit targetUnit) {
+    return {
+      "action": "attackAction",
+      "people": units,
+      "status" : "pending",
+      "infos": {
+        "unitType": type,
+        "targetType": targetUnit.name,
+        "target": targetUnit.position,
+        "targetID": targetUnit.uid,
+        "targetTeam": targetUnit.team,
+      }
+    };
+  }
+
+  Map<String, dynamic> getSpawnActionDict(String type) {
+    // Assuming `checkUnits()` is a method that returns a Map of unit counts
+    int pplCount = checkUnits().values.reduce((a, b) => a + b);
+    logger(pplCount);
+    // Get the TownCenter ID and its position
+    TownCenter tc = village.community["T"]!.values.first;
+    (int,int) tcPos = tc.position;
+
+    return {
+      "action": "spawnAction",
+      "infos": {
+        "unitType": type,
+        "unitSpawnPosition": (tcPos[0]-1, tcPos[1]-1),
+        "team": village.name,
+      }
+    };
+  }
+
+  /// Part where I set the actions
+  void setResourceAction(Map<String, int> concernedRes) {
+    List<int> resPriority = getResourcesPriority();
+    resPriority = [
+      resPriority[0] * level,
+      resPriority[1] * level,
+      resPriority[2] * level
+    ];
+
+    var resDistance = {
+      "w": concernedRes["w"]! - resPriority[0],
+      "g": concernedRes["g"]! - resPriority[1],
+      "f": concernedRes["f"]! - resPriority[2]
+    };
+
+    String resourceToGet = resDistance.keys.reduce(
+            (a, b) => resDistance[a]! < resDistance[b]! ? a : b);
+
+    logger("Ressource to get is ${resourceTypeENUM[resourceToGet]}");
+
+    Map<(int,int), Resources> resToCollect = getNearestRessource((0,0), resourceToGet);
+    logger("AIPlayer | setResourceAction--- resToCollectValue $resToCollect");
+
+    var nearestDP = getNearestDropPoint(resToCollect);
+    logger("AIPlayer | setResourceAction--- nearestDP Is, $nearestDP");
+
+    if (resToCollect == -1) {
+      return;
+    }
+
+    if (nearestDP == {-1: -1}) {
+      return;
+    }
+
+    try {
+      Map<String,dynamic> resourceCollectEvent = getResourcesActionDict(resToCollect, resourceToGet, nearestDP);
+      logger("Added the following resCollect event : \n Type :  ${resourceCollectEvent["infos"]["type"]}, \t nbOfPpl : , ${resourceCollectEvent["people"].length}, \t Position of the resource :, ${resourceCollectEvent["infos"]["target"]}");
+
+      logger("AIPlayer | setResourceAction--- resourceCollectEvent,  resourceCollectEvent");
+
+      eventQueue.add(resourceCollectEvent);
+    } catch (e) {
+      logger("AIPlayer | setResourceAction--- Not enough people to collectResource");
+    }
+  }
+
+  void setBuildingAction(Map<String, int> buildings) {
+    if (buildings["T"] == 0) {
+      var buildingEvent = getBuildingActionDict("T");
+      eventQueue.add(buildingEvent);
+    } else {
+      var buildingPriority = getBuildingsPriority();
+
+
+      var builtBuildings = [
+        buildings["A"]! + buildings["K"]! + buildings["S"]! + buildings["B"]!,
+        buildings["H"]! + buildings["T"]!,
+        buildings["F"]! + buildings["C"]!
+      ];
+
+      var buildingObjectiveDistance = {
+        "Military": builtBuildings[0] - buildingPriority[0],
+        "Village": builtBuildings[1] - buildingPriority[1],
+        "Farming": builtBuildings[2] - buildingPriority[2]
+      };
+
+      String leastDeveloppedBuildingType = buildingObjectiveDistance.keys.reduce(
+              (a, b) => buildingObjectiveDistance[a]! < buildingObjectiveDistance[b]! ? a : b);
+
+      if (buildingObjectiveDistance[leastDeveloppedBuildingType] == 0) {
+        return;
+      } else {
+        String leastDeveloppedBuildingName = "0";
+        int leastDeveloppedBuildingNumber = 0;
+
+        for (var i in buildingTypeENUM[leastDeveloppedBuildingType]!) {
+          if (buildings[buildingENUM[i]!]! < leastDeveloppedBuildingNumber || leastDeveloppedBuildingName == "0") {
+            leastDeveloppedBuildingName = buildingENUM[i]!;
+            leastDeveloppedBuildingNumber = buildings[buildingENUM[i]!]!;
+          }
+        }
+
+        if (!isAffordable(buildingCostENUM[leastDeveloppedBuildingName]!)) {
+          logger("Can't afford building");
+          return;
+        }
+
+        var buildingEvent = getBuildingActionDict(leastDeveloppedBuildingName);
+
+        if (buildingEvent == -1) {
+          logger("No free units");
+          return;
+        }
+        logger("Added the following building event : \n Type : ${buildingEvent["infos"]["type"]} \t nbOfPpl : ${buildingEvent["people"].length}");
+        eventQueue.add(buildingEvent);
+      }
+    }
+  }
+
+  List<List<dynamic>> getBestAvailbleUnits() {
+    List<List<dynamic>> unitRanking = [
+      ["h", 4.8],
+      ["a", 4],
+      ["s", 3.6],
+      ["v", 1.6]
+    ];
+
+    List<List<dynamic>> unitAvaibility = [];
+
+    for (var u in unitRanking) {
+      String unitType = u[0];
+      int unitCount = village.community[unitType]?.values.length ?? 0;
+      unitAvaibility.add([unitType, unitCount]);
+    }
+
+    return unitAvaibility;
+  }
+
+  void setHumanAction() {
+    (int,int) nearestVillageDistance = (10000, 10000);
+    Village? nearestVillage;
+
+    for (var a in world.villages) {
+      if (a.name == village.name) {
+        continue;
+      }
+
+      String firstTargetTCKey = a.community["T"]!.keys.first;
+      String firstTCKey = village.community["T"]!.keys.first;
+      TownCenter firstTargetTC = a.community["T"]![firstTargetTCKey]!;
+      TownCenter firstTC = village.community["T"]![firstTCKey]!;
+
+      (int,int) villageDistance = estimateDistance(firstTC.position, firstTargetTC.position);
+
+      if (villageDistance[0] < nearestVillageDistance[0] &&
+          villageDistance[0] < nearestVillageDistance[1]) {
+        nearestVillageDistance = villageDistance;
+        nearestVillage = a;
+      }
+    }
+
+    var unitAvaibilty = getBestAvailbleUnits();
+    logger("AIPlayer | setHumanAction--- available unit by level : $unitAvaibilty");
+
+    String selectedType = "v";
+
+    for (var a in unitAvaibilty) {
+      if (a[1] > 0) {
+        logger("AIPlayer | setHumanAction--- there is ${a[1]} ${a[0]} ");
+        selectedType = a[0];
+        break;
+      }
+    }
+
+    logger("AIPlayer | setHumanAction--- at the end selected type is :  $selectedType");
+    List<String> unitList = getFreePeople(1, selectedType);
+    if (unitList.isEmpty) {
+      logger("AIPlayer | setHumanAction--- Not enough people to Attack");
+      return;
+    }
+
+    for (var u in unitList) {
+      freeUnits[selectedType]!.remove(u);
+    }
+    String firstUnitKey = nearestVillage!.community["v"]!.keys.first;
+    var firstUnit = nearestVillage.community["v"]![firstUnitKey];
+    logger("AIPlayer | setHumanAction--- we are going to attack $firstUnit");
+
+    var actionDict = getHumanActionDict(unitList, selectedType, firstUnit);
+    logger("Added the following attack event : \n Target : ${actionDict["infos"]["targetID"]} \t nbOfPpl : , ${actionDict["people"].length},\t Position of the target :, ${actionDict["infos"]["target"]}");
+
+    eventQueue.add(actionDict);
+  }
+
+
+  /// Now for the part which launches the actions
+  void launchSpawnAction(Map<String, dynamic> actionDict){
+    String unitType = actionDict["infos"]["unitType"];
+    gameManager.addUnitToSpawnDict(unitType, village.name);
+    currentEvent.add(actionDict);
+    eventQueue.remove(actionDict);
+  }
+
+  void launchResourceAction(Map<String,dynamic> actionDict){
+
+    List<String> deadUnits = [];
+    for (String unit in actionDict["people"]){
+      if (village.deads.containsKey(unit)){
+        deadUnits.add(unit);
+      }
+    }
+    for (String id in deadUnits){
+      actionDict["people"].remove(id);
+    }
+    for (String id in actionDict["people"]){
+      Unit unitInstance = village.community["v"]![id];
+      Resources resourcesInstance= world.resources[actionDict["infos"]["type"]]![actionDict["infos"]["target"]]!;
+      (int,int) resPos = gameManager.addResourceToCollectDict(unitInstance, resourcesInstance, actionDict["infos"]["nearestDP"], actionDict["infos"]["quantity"]);
+      gameManager.addUnitToMoveDict(unitInstance, resPos);
+    }
+    currentEvent.add(actionDict);
+    eventQueue.remove(actionDict);
+  }
+
+  void launchBuildAction(Map<String,dynamic> actionDict){
+    String nextBuildingID = village.getNextUID("b");
+    Building? newBuilding = BuildingFactory.createBuilding(actionDict["infos"]["type"], nextBuildingID, actionDict["infos"]["target"], village.name);
+
+    if (newBuilding == null){
+      return;
+    }
+    (int,int)? newBuildingBuildPos =  gameManager.getEmptyTile(newBuilding.position).firstOrNull;
+    if (newBuildingBuildPos == null){
+      return;
+    }
+    for (String id in actionDict["people"]){
+      Unit unitInstance = village.community["v"]![id];
+      gameManager.addUnitToMoveDict(unitInstance, newBuildingBuildPos);
+    }
+    newBuilding.health = 0;
+    village.addBuilding(newBuilding);
+    gameManager.addBuildingToBuildDict(newBuilding, actionDict["people"]);
+    currentEvent.add(actionDict);
+    eventQueue.remove(actionDict);
+  }
+
+  void launchHumanAction(Map<String,dynamic> actionDict){
+    List<Unit> unitList = [];
+    for (String id in actionDict["people"]){
+      Unit unitInstance = village.community[actionDict["infos"]["unitType"]]![id]!;
+      gameManager.addUnitToMoveDict(unitInstance, actionDict["infos"]["target"]);
+    }
+    Unit? targetUnit = world.getVillage(actionDict["infos"]["targetTeam"]).community[actionDict["infos"]["targetType"]]?[actionDict["infos"]["targetID"]];
+    if (targetUnit == null){
+      logger("LaunchHumanAction --- unit doesnot exists");
+      return;
+    }
+    gameManager.addUnitToAttackDict(unitList, targetUnit);
+    currentEvent.add(actionDict);
+    eventQueue.remove(actionDict);
+  }
+
+  void launchAction(Map<String,dynamic> actionDict){
+    Map<String, Function> launchActionENUM ={
+      "Build" : (Map<String, dynamic> actionDict) => launchBuildAction(actionDict),
+      "collectResource" : (Map<String, dynamic> actionDict) => launchResourceAction(actionDict),
+      "attackAction" : (Map<String, dynamic> actionDict) => launchHumanAction(actionDict),
+      "spawnAction" : (Map<String, dynamic> actionDict) => launchSpawnAction(actionDict)
+    };
+
+    launchActionENUM[actionDict["action"]]!(actionDict);
+  }
+
+  void checkBuildingAction(Map<String, dynamic> event) {
+    String bldID = event["infos"]["uid"];
+    if (gameManager.checkBuildingStatus(bldID)) {
+      event["status"] = "finished";
+    }
+  }
+
+  void checkResourceAction(Map<String, dynamic> event) {
+    String targetRes = event["infos"]["people"].first;
+    if (gameManager.checkResourceStatus(targetRes)) {
+      event["status"] = "finished";
+    }
+  }
+
+  void checkAttackAction(Map<String, dynamic> event) {
+    List unitID = event["people"];
+    bool finishedEvent = false;
+
+    for (var i in unitID) {
+      finishedEvent = gameManager.checkAttackStatus(i);
+    }
+
+    if (finishedEvent) {
+      event["status"] = "finished";
+    }
+  }
+
+  void checkUnitSpawnAction(Map<String, dynamic> event) {
+    String unitID = event["infos"]["futureID"];
+    if (gameManager.checkSpawnStatus(unitID)) {
+      event["status"] = "finished";
+    }
+  }
 
 
 

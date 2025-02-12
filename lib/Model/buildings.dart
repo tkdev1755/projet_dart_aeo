@@ -85,3 +85,34 @@ class TownCenter extends Building {
 
 }
 
+class BuildingFactory {
+  static final Map<String, Function> buildingInitDict = {
+    "T": (uid,position,team) => TownCenter(uid,position,team),
+  };
+  static final Map<String, (int,int)> buildingSizeDict = {
+    "T" : (4,4),
+    "A" : (3,3),
+    "K" : (1,1),
+    "B" : (3,3),
+    "F" : (2,2),
+    "C" : (2,2),
+    "H" : (2,2),
+    "S" : (3,3),
+  };
+
+  static (int,int)? getSize(String key){
+    if (buildingInitDict.containsKey(key)) {
+      return buildingSizeDict[key]; // Call the constructor function
+    }
+    return null;
+  }
+
+  static Building? createBuilding(String key, uid,position,team) {
+    if (buildingInitDict.containsKey(key)) {
+      return buildingInitDict[key]!(uid,position,team); // Call the constructor function
+    }
+    return null;
+  }
+}
+
+
