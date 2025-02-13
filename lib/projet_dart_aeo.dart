@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:projet_dart_aeo/Controller/gameManager.dart';
 import 'package:projet_dart_aeo/Controller/terminalController.dart';
+import 'package:projet_dart_aeo/Model/AIPlayer.dart';
 import 'package:projet_dart_aeo/Model/World.dart';
 import 'package:dart_console/dart_console.dart';
 import 'package:projet_dart_aeo/Model/resources.dart';
@@ -64,7 +65,7 @@ Map<int, CG.Color> colorMap = {
 
 final buffer = StringBuffer();
 bool done = false;
-bool debug = false;
+bool debug = true;
 
 int tests(){
   World world = randomWorld({"X" : 120, "Y":120, "t": "g", "n" : 2});
@@ -120,7 +121,6 @@ int tests(){
   //tc3.health = 0;
   //village1.addBuilding(tc3);
   //gm.addBuildingToBuildDict(tc3, [newVillager.uid]);
-  gm.addUnitToSpawnDict("v", 1);
   //gm.addUnitToMoveDict(newVillager2, (24,20));
   //gm.addUnitToMoveDict(newVillager, gm.moveDict[newVillager2.uid]!["goal"]);
   //gm.addUnitToAttackDict([newVillager], newVillager2);
@@ -161,7 +161,14 @@ void draw(World world){
 }
 
 
-
+List<AIPlayer> initializeAIs(World world, gameManager){
+  List<AIPlayer> ais = [];
+  Playstyle generalPlayStyle = playStyleENUM["Passive"]!;
+  for (var k in world.villages){
+    ais.add(AIPlayer(world, k, generalPlayStyle, 100, gameManager));
+  }
+  return ais;
+}
 
 
 
@@ -235,6 +242,7 @@ readInput(List<int> args, GameManager gameManager, TerminalController tmc) {
 }
 
 gameLoop(World world, GameManager gameManager) async {
+  List<AIPlayer> ais= [];
   TerminalController termController = TerminalController(debug, false,false, true, false);
   CG.Keyboard.init();
   List<int> args = [world.height, world.width];
@@ -242,6 +250,9 @@ gameLoop(World world, GameManager gameManager) async {
   console.hideCursor();
   readInput(args, gameManager,termController);
   int statNumber = 0;
+  ais = initializeAIs(world, gameManager);
+  int aiNumber = ais.length;
+  int currentAI = 0;
   try {
     console.rawMode = false;
     console.hideCursor();
@@ -260,6 +271,16 @@ gameLoop(World world, GameManager gameManager) async {
 
           }
         }
+        update(world, gameManager);
+        gameManager.tick = DateTime.now();
+        ais[currentAI].playTurn();
+        if (currentAI == aiNumber-1){
+          currentAI++;
+
+        }
+        else{
+          currentAI = 0;
+        }
       }
       else{
         if (termController.pause){
@@ -267,8 +288,7 @@ gameLoop(World world, GameManager gameManager) async {
         }
       }
 
-      update(world, gameManager);
-      gameManager.tick = DateTime.now();
+
       if (done) quit();
     });
   } catch (exception) {

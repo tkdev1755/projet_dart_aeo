@@ -140,6 +140,7 @@ void placeTcs(Map<String, dynamic> dict, World world) {
     Village village = world.getVillage(i+1);
     String uid = village.getNextUID("b");
     TownCenter tc = TownCenter(uid, (0,0), village.name);
+    tc.health = buildingHealthENUM["T"]!.toDouble();
     (int,int) pos;
     switch (i) {
       case 0:

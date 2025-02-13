@@ -45,7 +45,11 @@ class Village{
     int vNumber = community["v"]?.length ?? 0;
     return aNumber+hNumber+sNumber+vNumber;
   }
-  
+
+  int getBuildingCount(String type){
+    return community[type]?.length ?? 0;
+  }
+
   bool canAfford(Map<String, int> costDict){
     for (var value in costDict.entries){
       if (value.value > (resources[value.key]!)){

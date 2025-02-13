@@ -131,6 +131,7 @@ class GameManager{
     }
     );
     for (var value in elementToRemove){
+      logger("GameManager | checkBuildingsToBuild--- Removed the following event ${value}");
       buildDict.remove(value);
     }
     return 0;
@@ -232,14 +233,13 @@ class GameManager{
     return 0;
   }
 
-  int addUnitToSpawnDict(String type, int team){
+  int addUnitToSpawnDict(String type, int team, (int,int) buildingPos){
     String nextUID = world.villages[team-1].getNextUID(type);
-    (int,int) tcPosition = world.villages[team-1].community["T"].entries.first.value.position;
     spawnDict[nextUID] = {
       "newID" : nextUID,
       "unitTeam" : team,
       "unitType" : type,
-      "spawnPosition" : (tcPosition[0]-1,tcPosition[1]-1),
+      "spawnPosition" : buildingPos,
       "timeElapsed": 0,
       "timeToTrain" : unitTrainTimeENUM[type],
       "initialized" : false,
@@ -308,7 +308,7 @@ class GameManager{
     if (moveDict[uid]!["timeElapsed"] >= moveDict[uid]!["timeToTile"]){
       logger("Unit arrived to the next tile");
       logger("path is ${moveDict[uid]!["path"]}");
-      print("Goal is ${moveDict[uid]!["goal"]}");
+      logger("Goal is ${moveDict[uid]!["goal"]}");
       moveDict[uid]!["timeElapsed"] = 0;
       (int,int) oldPos = moveDict[uid]!["path"][0];
       (moveDict[uid]!["path"] as List<(int,int)>).removeAt(0);

@@ -117,7 +117,7 @@ class World{
   }
 
   bool isOutOfBound((int,int) element){
-    print("Element position is $element}");
+    logger("Element position is $element}");
     return (element[0] > width && element[1] > height) || (element[0] < 0 && element[1] < 0);
   }
 
