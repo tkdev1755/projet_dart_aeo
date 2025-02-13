@@ -36,7 +36,7 @@ const Map<PlayStyle, List<List<int>>> playStyleMatrix = {
 };
 
 Map<String, Playstyle> playStyleENUM = {
-  "Aggressive" : Playstyle(1, playStyleMatrix[PlayStyle.Aggressive]!),
+  "Aggressive" : Playstyle(5, playStyleMatrix[PlayStyle.Aggressive]!),
   "Passive" : Playstyle(1, playStyleMatrix[PlayStyle.Passive]!),
   "Defensive" : Playstyle(1,playStyleMatrix[PlayStyle.Defensive]!)
 };
@@ -102,12 +102,7 @@ const Map<String, List<String>> unitTypeENUM = {
   "Farming": ["v"]
 };
 
-const Map<UnitType, Map<String, int>> unitCostENUM = {
-  UnitType.a: {"w": 25, "g": 45},
-  UnitType.h: {"f": 80, "g": 20},
-  UnitType.s: {"f": 50, "20": 20},
-  UnitType.v: {"f": 50}
-};
+
 class Playstyle{
 
     List<List<int>> playStyleMatrix;
@@ -166,9 +161,10 @@ class AIPlayer{
     logger("----- AIPlayer n°${village.name} STARTED PLAYING ----");
     checkForDeadUnits();
     int workingPpl = village.getUnitNumber() - getFreePplCount();
-    logger("AIPlayer | playTurn--- freeUnits are ${freeUnits} and workingUnits are ${workingPpl}");
-    if (workingPpl < playstyle.minworkers){
+    logger("AIPlayer | playTurn--- freeUnits are ${getFreePplCount()} ${freeUnits} and workingUnits are ${workingPpl}, village pop is ${village.getUnitNumber()}");
+    if (workingPpl <= playstyle.minworkers && getFreePplCount() != 0){
       logger("Minworkers hit, playing now");
+      setSpawnAction();
       setBuildingAction(checkBuildings());
       setResourceAction(village.resources);
       for (var k in eventQueue){
@@ -459,15 +455,13 @@ class AIPlayer{
   }
 
   Map<String, dynamic> getSpawnActionDict(String type, (int,int) buildingPos) {
-    // Assuming `checkUnits()` is a method that returns a Map of unit counts
-    int pplCount = checkUnits().values.reduce((a, b) => a + b);
-    logger(pplCount);
-    // Get the TownCenter ID and its position
+    String nextUnitID = village.getNextUID("p");
     return {
       "action": "spawnAction",
       "infos": {
         "unitType": type,
         "unitSpawnPosition": (buildingPos[0]-1, buildingPos[1]-1),
+        "futureID" : nextUnitID,
         "team": village.name,
       }
     };
@@ -647,70 +641,61 @@ class AIPlayer{
   }
 
   void setSpawnAction(){
-    if (spawningUnit > 4){
-      logger("AIPlayer | setSpawnAction--- too much unit are being trained at the moment");
+    if (spawningUnit > 4 || village.getMaxUnitNumber() == village.getUnitNumber()){
+      logger("AIPlayer | setSpawnAction--- too much unit are being trained at the moment or there is no more place");
       return;
     }
     List<int> unitsPriority = getBuildingsPriority();
     int unitSum = unitsPriority.reduce((a,b) => a+b);
     List<double> coefficients = [(unitsPriority[0]/unitSum),(unitsPriority[1]/unitSum),(unitsPriority[2]/unitSum)];
     List<int> flooredUnitsPriority = [(coefficients[0]*200).toInt(),(coefficients[1]*200).toInt(),(coefficients[2]*200).toInt()];
-    logger("AIPlayer | setSpawnAction--- flooredUnitsPrioritySum is ${flooredUnitsPriority.reduce((a,b) => a+b)}");
     Map<String,Map<String, dynamic>> villageCommunity = village.community;
     var spawnedUnits = [
       (villageCommunity["a"]?.length ?? 0) + (villageCommunity["h"]?.length ?? 0) +  (villageCommunity["s"]?.length ?? 0),
       (villageCommunity["v"]?.length ?? 0),
       (villageCommunity["v"]?.length ?? 0),
     ];
-
     Map<String, int> unitObjectiveDistance = {
       "Military": spawnedUnits[0] - flooredUnitsPriority[0],
       "Village": spawnedUnits[1] - flooredUnitsPriority[1],
       "Farming": spawnedUnits[2] - flooredUnitsPriority[2]
     };
-    String leastDeveloppedUnitType = "";
-    int leastDeveloppedUnitTypeDistance = 100000;
-    unitObjectiveDistance.forEach((k,v)
-      {
-        if (leastDeveloppedUnitTypeDistance > v){
-          leastDeveloppedUnitTypeDistance = v;
-          leastDeveloppedUnitType = k;
-        }
-      }
-    );
-    if (leastDeveloppedUnitType == ""){
-      logger("AIPlayer | setSpawnAction--- no UnitType is not Developped is $leastDeveloppedUnitType");
-      return ;
-    }
+    List<(String,int)> unitTypeRanking = unitObjectiveDistance.entries.map((e) => (e.key, e.value)).toList();
+    unitTypeRanking.sort((a,b) => a[1].compareTo(b[1]));
+    logger("AIPlayer | setSpawnAction--- unitRanking is $unitTypeRanking");
+    String leastDeveloppedUnitType = unitTypeRanking[0][0];
     logger("AIPlayer | setSpawnAction--- leastDeveloppedUnitType is $leastDeveloppedUnitType");
-    String leastDeveloppedUnit = "";
-    int leastDeveloppedUnitDistance = 100000;
-    for (String k in unitTypeENUM[leastDeveloppedUnitType]!){
-      int unitNumber = villageCommunity[k]?.length ?? 0;
-      if (leastDeveloppedUnitDistance > unitNumber){
-        leastDeveloppedUnitDistance = unitNumber;
-        leastDeveloppedUnit = k;
+    List<(String, int)> unitRanking = unitTypeENUM[leastDeveloppedUnitType]!.map((e) => (e, villageCommunity[e]?.length ?? 0)).toList();
+    unitRanking.sort((a,b) => a[1].compareTo(b[1]));
+    logger("AIPlayer | setSpawnAction--- least developped unit is ${unitRanking[0]}");
+    bool foundUnitToSpawn = false;
+    String unitToSpawn = "";
+    String buildingToSpawn = "";
+    for (int i=0; i<unitTypeRanking.length && !foundUnitToSpawn; i++){
+      for (var type in unitRanking){
+        Map<String,int>? unitCost = UnitFactory.getUnitCost(type[0]);
+        String? buildingToSpawnFrom = BuildingFactory.getBuildingToSpawnFrom(type[0]);
+        if (unitCost != null && buildingToSpawnFrom != null){
+          if (isAffordable(unitCost) && village.getBuildingCount(buildingToSpawnFrom) != 0){
+            foundUnitToSpawn = true;
+            buildingToSpawn = buildingToSpawnFrom;
+            unitToSpawn = type[0];
+            break;
+          }
+        }
+        unitRanking = unitTypeENUM[unitTypeRanking[i][0]]!.map((e) => (e, villageCommunity[e]?.length ?? 0)).toList();
+        unitRanking.sort((a,b) => a[1].compareTo(b[1]));
       }
     }
-    if (leastDeveloppedUnit == ""){
-      logger("AIPlayer | setSpawnAction--- no UnitType is not Developped");
-      return ;
+    if (unitToSpawn == ""){
+      logger("AIPlayer | setSpawnAction--- Not enough resources to spawn any unit");
+      return;
     }
-    logger("AIPlayer | setSpawnAction--- least developped unit is $leastDeveloppedUnit");
-    String buildingToSpawnUnit = BuildingFactory.buildingSpawnDict[leastDeveloppedUnit]!;
-    int buildingNumber = village.getBuildingCount("buildingToSpawnUnit");
-    TownCenter tc = village.community["T"]!.values.first;
-    (int,int) buildingPos = tc.position;
-    if (buildingNumber == 0){
-      leastDeveloppedUnit = "v";
-    }
-    else{
-      buildingPos = village.community[buildingToSpawnUnit]!.values.first.position;
-    }
-    Map<String,dynamic> event = getSpawnActionDict(leastDeveloppedUnit,buildingPos);
+    logger("AIPlayer | setSpawnAction--- choosen unit to spawn is ${unitToSpawn}");
+    (int,int) buildingPos = village.community[buildingToSpawn]!.values.first.position;
+    Map<String,dynamic> event = getSpawnActionDict(unitToSpawn,buildingPos);
 
     eventQueue.add(event);
-
   }
 
 
@@ -718,6 +703,8 @@ class AIPlayer{
   void launchSpawnAction(Map<String, dynamic> actionDict){
     String unitType = actionDict["infos"]["unitType"];
     (int,int) buildingPos = actionDict["infos"]["unitSpawnPosition"];
+    logger("AIPlayer | launchSpawnAction--- Spawned new ${unitType} (${actionDict["infos"]["futureID"]}) for ${village.name} at ${buildingPos}");
+    spawningUnit ++;
     gameManager.addUnitToSpawnDict(unitType, village.name, buildingPos);
     currentEvent.add(actionDict);
     //eventQueue.remove(actionDict);
@@ -836,8 +823,11 @@ class AIPlayer{
   }
 
   void checkUnitSpawnAction(Map<String, dynamic> event) {
+    logger("AIPlayer | checkUnitSpawnAction--- checking units");
     String unitID = event["infos"]["futureID"];
+    logger("AIPlayer | checkUnitSpawnAction--- checking if unit ${unitID} is fully trained");
     if (gameManager.checkSpawnStatus(unitID)) {
+      logger("Unit ${unitID} is fully trained and ready to be added to the team");
       event["status"] = "finished";
     }
   }
@@ -858,7 +848,7 @@ class AIPlayer{
       "Build" : (Map<String, dynamic> actionDict) => clearBuildAction(actionDict),
       "collectResource" : (Map<String, dynamic> actionDict) => clearResourcesActions(actionDict),
       "attackAction" : (Map<String, dynamic> actionDict) => clearAttackAction(actionDict),
-      "spawnAction" : (Map<String, dynamic> actionDict) => checkUnitSpawnAction(actionDict)
+      "spawnAction" : (Map<String, dynamic> actionDict) => clearUnitSpawnAction(actionDict)
     };
     checkActionENUM[event["action"]]!(event);
 
@@ -888,8 +878,10 @@ class AIPlayer{
   }
 
   void clearUnitSpawnAction(Map<String, dynamic> event){
-    String unitID = event["infos"]["uid"];
+    logger("AIPlayer | clearUnitSpawnAction--- Now adding the unit to freeunits");
+    String unitID = event["infos"]["futureID"];
     String unitType = event["infos"]["unitType"];
+    spawningUnit--;
     freeUnits.putIfAbsent(unitType, ()=>[]);
     freeUnits[unitType]!.add(unitID);
   }

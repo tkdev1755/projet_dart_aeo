@@ -78,7 +78,18 @@ class UnitFactory {
   static final Map<String, Function> unitInitDict = {
     "v": (uid,position,team) => Villager(uid,position,team),
   };
-
+  static final Map<String, Map<String, int>> unitCostDict = {
+    "a": {"w": 25, "g": 45},
+    "h": {"f": 80, "g": 20},
+    "s": {"f": 50, "20": 20},
+    "v": {"f": 50}
+  };
+  static Map<String,int>? getUnitCost(String key){
+    if (unitInitDict.containsKey(key)){
+      return unitCostDict[key]!;
+    }
+    return null;
+  }
   static Unit? createUnit(String key, uid,position,team) {
     if (unitInitDict.containsKey(key)) {
       return unitInitDict[key]!(uid,position,team); // Call the constructor function

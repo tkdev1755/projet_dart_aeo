@@ -243,6 +243,12 @@ class BuildingFactory {
     return null;
   }
 
+  static String? getBuildingToSpawnFrom(String key){
+    if (buildingSpawnDict.containsKey(key)){
+      return buildingSpawnDict[key];
+    }
+    return null;
+  }
   static Building? createBuilding(String key, uid,position,team) {
     if (buildingInitDict.containsKey(key)) {
       return buildingInitDict[key]!(uid,position,team); // Call the constructor function

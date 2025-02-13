@@ -199,7 +199,8 @@ class GameManager{
     }
     List<(int,int)> path = optionalPath ?? AStar(rows: world.width, columns: world.height, start: unit.position, end: goal, barriers: barriers).findThePath().toList();
     if (path.isEmpty && distance[0] >= 1 && distance[1] >= 1){
-      logger("Crash while computing path");
+      logger("Crash while computing path, here are the details");
+      logger("GameManager | addUnitToMoveDict--- start was ${unit.position} & goal was ${goal} ");
       return -1;
     }
     logger(" path is {$path}");
@@ -234,7 +235,7 @@ class GameManager{
   }
 
   int addUnitToSpawnDict(String type, int team, (int,int) buildingPos){
-    String nextUID = world.villages[team-1].getNextUID(type);
+    String nextUID = world.villages[team-1].getNextUID("p");
     spawnDict[nextUID] = {
       "newID" : nextUID,
       "unitTeam" : team,
@@ -394,6 +395,7 @@ class GameManager{
         unitToSpawn["fullyTrained"] = true;
       }
       else{
+        logger("GameManager | spawnUnit--- training unit ${unitToSpawn["newID"]} - time : ${unitToSpawn["timeElapsed"]} ");
         unitToSpawn["timeElapsed"] += igDeltaInSeconds;
       }
     }
@@ -536,7 +538,7 @@ class GameManager{
 
   bool checkSpawnStatus(String id){
     if (spawnDict.containsKey(id)){
-      return resourceDict[id]!["fullyTrained"];
+      return spawnDict[id]!["fullyTrained"];
     }
     else{
       return true;
