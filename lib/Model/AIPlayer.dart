@@ -137,7 +137,7 @@ class AIPlayer{
   List<Map<String, dynamic>> currentEvent = [];
   List<TownCenter> tcs = [];
   int spawningUnit = 0;
-
+  (int,int) topVillageBorder = (0,0);
   AIPlayer(
       this.world,
       this.village,
@@ -154,6 +154,9 @@ class AIPlayer{
     };
     List<TownCenter> tcList = (village.community["T"]?.values.toList() ?? []).cast();
     tcs = tcList;
+    if (tcs.isNotEmpty){
+      topVillageBorder = (tcs[0].position[0]-1,tcs[0].position[1]-1);
+    }
   }
 
 
@@ -284,13 +287,13 @@ class AIPlayer{
   }
 
   dynamic getNearestDropPoint(Map<(int,int), Resources> resource) {
-    var dpKeys = village.community["T"]?.keys.toList() ?? [];
-    var dropPoints = village.community["T"]?.values.map((dp) => estimateDistance(dp.position, resource.keys.first)).toList() ?? [];
-
+    logger("Drops points aaare");
+    List<(String,(int,int))> dropPoints = village.community["T"]?.entries.map((e) => (e.key,estimateDistance(e.value.position, resource.keys.first))).toList() ?? [];
     if (dropPoints.isEmpty) return -1;
+    dropPoints.sort((a,b) => a[1].compareTo(b[1]));
+    (String, (int,int)) test = dropPoints[0];
 
-    int nearestIndex = dropPoints.indexOf(dropPoints.reduce((a, b) => a.$1 + a.$2 < b.$1 + b.$2 ? a : b));
-    return village.community["T"]?[dpKeys[nearestIndex]];
+    return village.community["T"]?[test[0]];
   }
 
   int getOptimalBuildingCurve(String buildingType) {
@@ -487,7 +490,7 @@ class AIPlayer{
 
     logger("Ressource to get is ${resourceTypeENUM[resourceToGet]}");
 
-    Map<(int,int), Resources> resToCollect = getNearestRessource((0,0), resourceToGet);
+    Map<(int,int), Resources> resToCollect = getNearestRessource(topVillageBorder, resourceToGet);
     logger("AIPlayer | setResourceAction--- resToCollectValue $resToCollect");
 
     var nearestDP = getNearestDropPoint(resToCollect);

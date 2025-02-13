@@ -446,6 +446,7 @@ class GameManager{
     Map<String,dynamic> resToCollect = resourceDict[id]!;
     Unit unitInstance = getUnitInstance(resToCollect["unitTeam"], id, resToCollect["unitType"]);
     Resources? resInstance = world.resources[resToCollect["resType"]]?[resToCollect["resPosition"]];
+    logger("GameManager | collectResources--- Ressources in map ? ${world.tiles[resInstance?.position]?.contains ?? "Nulllll"}");
     (int,int) dpPos = resToCollect["nearDPPos"];
     if (resInstance == null) {
       logger("Resources doesn't exist");
