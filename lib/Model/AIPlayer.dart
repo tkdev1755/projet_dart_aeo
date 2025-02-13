@@ -37,7 +37,7 @@ const Map<PlayStyle, List<List<int>>> playStyleMatrix = {
 
 Map<String, Playstyle> playStyleENUM = {
   "Aggressive" : Playstyle(5, playStyleMatrix[PlayStyle.Aggressive]!),
-  "Passive" : Playstyle(1, playStyleMatrix[PlayStyle.Passive]!),
+  "Passive" : Playstyle(2, playStyleMatrix[PlayStyle.Passive]!),
   "Defensive" : Playstyle(1,playStyleMatrix[PlayStyle.Defensive]!)
 };
 enum BuildingType {
@@ -801,7 +801,8 @@ class AIPlayer{
   }
 
   void checkResourceAction(Map<String, dynamic> event) {
-    String targetRes = event["infos"]["people"].first;
+    logger("AIPlayer | checkResourceAction--- Event is ${event}");
+    String targetRes = event["people"].first;
     if (gameManager.checkResourceStatus(targetRes)) {
       logger("Finished collecting ${targetRes}");
       event["status"] = "finished";

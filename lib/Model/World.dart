@@ -100,9 +100,11 @@ class World{
   int updateUnitPosition((int,int) oldPos,Unit unit){
     if (unitPositions.containsKey(unit.position)){
       unitPositions[unit.position]!.add(unit);
-      unitPositions[oldPos]!.remove(unit);
-      if (unitPositions[oldPos]!.isEmpty) {
-        unitPositions.remove(oldPos);
+      if (unitPositions.containsKey(oldPos)){
+        unitPositions[oldPos]!.remove(unit);
+        if (unitPositions[oldPos]!.isEmpty) {
+          unitPositions.remove(oldPos);
+        }
       }
     }
     else{
