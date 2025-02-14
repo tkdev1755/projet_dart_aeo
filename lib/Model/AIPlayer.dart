@@ -273,21 +273,34 @@ class AIPlayer{
     return ((pos2.$1 - pos1.$1).abs(), (pos2.$2 - pos1.$2).abs());
   }
 
-  Map<(int,int), Resources> getNearestRessource((int, int) topLeftPos, String resourceType) {
+  Map<(int,int), Resources> getNearestResource((int, int) topLeftPos, String resourceType) {
+
     var resources = world.resources[resourceType];
-    if (resources == null || resources.isEmpty) return {};
+    if (resources == null || resources.isEmpty) {
+      logger("AIPlayer | getNearestResource--- Seems that there is no more resources");
+      return {};
+    }
 
-    var ressourceKeys = resources.keys.toList();
-    var resourcePositions = resources.values.map((res) => estimateDistance(res.position, topLeftPos)).toList();
-
-    if (resourcePositions.isEmpty) return {};
-
-    int nearestIndex = resourcePositions.indexOf(resourcePositions.reduce((a, b) => a.$1 + a.$2 < b.$1 + b.$2 ? a : b));
-    return {ressourceKeys[nearestIndex]: resources[ressourceKeys[nearestIndex]]!};
+    logger("AIPlayer | getNearestResource--- Here are the desired resources $resources"); /// TO DELETE
+    List<(Resources,(int,int))> resourcePositions = resources.values.map((res) => (res,estimateDistance(res.position, topLeftPos))).toList();
+    logger("AIPlayer | getNearestResource--- Here is the mapped array $resourcePositions"); /// TO DELETE
+    if (resourcePositions.isEmpty) {
+      logger("AIPlayer | getNearestResource--- Seems that it wasn't possible to sort the table");
+      return {};
+    };
+    resourcePositions.sort((a,b) {
+      (int,int) distanceA = a[1];
+      (int,int) distanceB = b[1];
+      return distanceA.compareDistance(distanceB);
+    });
+    Map<(int,int), Resources> selectedResource = {resourcePositions[0][1] : resourcePositions[0][0]!};
+    return selectedResource;
   }
 
   dynamic getNearestDropPoint(Map<(int,int), Resources> resource) {
-    logger("Drops points aaare");
+    if (resource == {}) return -1;
+    logger("RESOURCE IIIIIS ${resource}");
+    logger("Drops points aaare ${village.community["T"] ?? "NULLLL"}");
     List<(String,(int,int))> dropPoints = village.community["T"]?.entries.map((e) => (e.key,estimateDistance(e.value.position, resource.keys.first))).toList() ?? [];
     if (dropPoints.isEmpty) return -1;
     dropPoints.sort((a,b) => a[1].compareTo(b[1]));
@@ -490,7 +503,7 @@ class AIPlayer{
 
     logger("Ressource to get is ${resourceTypeENUM[resourceToGet]}");
 
-    Map<(int,int), Resources> resToCollect = getNearestRessource(topVillageBorder, resourceToGet);
+    Map<(int,int), Resources> resToCollect = getNearestResource(topVillageBorder, resourceToGet);
     logger("AIPlayer | setResourceAction--- resToCollectValue $resToCollect");
 
     var nearestDP = getNearestDropPoint(resToCollect);

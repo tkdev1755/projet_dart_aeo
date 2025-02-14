@@ -35,6 +35,14 @@ extension RecordIndexing<T1, T2> on (T1, T2) {
         throw RangeError("Invalid index $index for a record of length 2.");
     }
   }
+
+}
+
+extension TupleIntComparable on (int, int) {
+  int compareDistance((int, int) other) {
+
+    return sqrt((pow($1, 2)+pow($2, 2))).compareTo(sqrt((pow(other.$1, 2)+pow(other.$2, 2))));
+  }
 }
 
 
@@ -65,7 +73,7 @@ Map<int, CG.Color> colorMap = {
 
 final buffer = StringBuffer();
 bool done = false;
-bool debug = false;
+bool debug = true;
 
 int tests(){
   World world = randomWorld({"X" : 120, "Y":120, "t": "g", "n" : 2});
