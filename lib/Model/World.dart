@@ -101,7 +101,6 @@ class World{
     if (unitPositions.containsKey(unit.position)){
       unitPositions[unit.position]!.add(unit);
       if (unitPositions.containsKey(oldPos)){
-
         unitPositions[oldPos]!.remove(unit);
         if (unitPositions[oldPos]!.isEmpty) {
           unitPositions.remove(oldPos);

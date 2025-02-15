@@ -110,25 +110,73 @@ void placeTcs(Map<String, dynamic> dict, World world) {
   // Clear space
   for (int j = y - 8; j < y + 20; j++) {
     for (int i = x - 8; i < x + 20; i++) {
-      world.tiles.remove((i, j));
+      if (world.tiles.containsKey((i,j))){
+        String type = world.tiles[(i,j)]!.contains.name;
+        if (world.resources[type]!.containsKey((i,j)) && world.tiles[(i,j)]!.contains is Resources){
+          world.resources[type]!.remove((i,j));
+        }
+      }
+      world.tiles.remove((world.width - i, world.height - j));
+      if (world.tiles.containsKey((world.width - i, world.height - j))){
+        String type = world.tiles[(world.width - i, world.height - j)]!.contains.name;
+        if (world.resources[type]!.containsKey((world.width - i, world.height - j)) && world.tiles[(world.width - i, world.height - j)]!.contains is Resources){
+          world.resources[type]!.remove((world.width - i, world.height - j));
+        }
+      }
       world.tiles.remove((world.width - i, world.height - j));
 
       if (dict["n"] >= 3) {
+        if (world.tiles.containsKey((i, world.height - j))){
+          String type = world.tiles[(i, world.height - j)]!.contains.name;
+          if (world.resources[type]!.containsKey((i, world.height - j)) && world.tiles[(i, world.height - j)]!.contains is Resources){
+            world.resources[type]!.remove((i, world.height - j));
+          }
+        }
         world.tiles.remove((i, world.height - j));
       }
       if (dict["n"] >= 4) {
+        if (world.tiles.containsKey((world.width - i, j))){
+          String type = world.tiles[(world.width - i, j)]!.contains.name;
+          if (world.resources[type]!.containsKey((world.width - i, j)) && world.tiles[(world.width - i, j)]!.contains is Resources){
+            world.resources[type]!.remove((world.width - i, j));
+          }
+        }
         world.tiles.remove((world.width - i, j));
       }
       if (dict["n"] >= 5) {
+        if (world.tiles.containsKey((world.width ~/ 2 - i, j))){
+          String type = world.tiles[(world.width ~/ 2 - i, j)]!.contains.name;
+          if (world.resources[type]!.containsKey((world.width ~/ 2 - i, j)) && world.tiles[(world.width ~/ 2 - i, j)]!.contains is Resources){
+            world.resources[type]!.remove((world.width ~/ 2 - i, j));
+          }
+        }
         world.tiles.remove((world.width ~/ 2 - i, j));
       }
       if (dict["n"] >= 6) {
+        if (world.tiles.containsKey((world.width ~/ 2 - i, world.height - j))){
+          String type = world.tiles[(world.width ~/ 2 - i, world.height - j)]!.contains.name;
+          if (world.resources[type]!.containsKey((world.width ~/ 2 - i, world.height - j)) && world.tiles[(world.width ~/ 2 - i, world.height - j)]!.contains is Resources){
+            world.resources[type]!.remove((world.width ~/ 2 - i, world.height - j));
+          }
+        }
         world.tiles.remove((world.width ~/ 2 - i, world.height - j));
       }
       if (dict["n"] >= 7) {
+        if (world.tiles.containsKey((i, world.height ~/ 2 - j))){
+          String type = world.tiles[(i, world.height ~/ 2 - j)]!.contains.name;
+          if (world.resources[type]!.containsKey((i, world.height ~/ 2 - j)) && world.tiles[(i, world.height ~/ 2 - j)]!.contains is Resources){
+            world.resources[type]!.remove((i, world.height ~/ 2 - j));
+          }
+        }
         world.tiles.remove((i, world.height ~/ 2 - j));
       }
       if (dict["n"] >= 8) {
+        if (world.tiles.containsKey((world.width - i, world.height ~/ 2 - j))){
+          String type = world.tiles[(world.width - i, world.height ~/ 2 - j)]!.contains.name;
+          if (world.resources[type]!.containsKey((world.width - i, world.height ~/ 2 - j)) && world.tiles[(world.width - i, world.height ~/ 2 - j)]!.contains is Resources){
+            world.resources[type]!.remove((world.width - i, world.height ~/ 2 - j));
+          }
+        }
         world.tiles.remove((world.width - i, world.height ~/ 2 - j));
       }
     }

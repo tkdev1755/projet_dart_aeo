@@ -37,7 +37,7 @@ const Map<PlayStyle, List<List<int>>> playStyleMatrix = {
 
 Map<String, Playstyle> playStyleENUM = {
   "Aggressive" : Playstyle(5, playStyleMatrix[PlayStyle.Aggressive]!),
-  "Passive" : Playstyle(2, playStyleMatrix[PlayStyle.Passive]!),
+  "Passive" : Playstyle(3, playStyleMatrix[PlayStyle.Passive]!),
   "Defensive" : Playstyle(1,playStyleMatrix[PlayStyle.Defensive]!)
 };
 enum BuildingType {
@@ -131,7 +131,7 @@ class AIPlayer{
   int level;
   GameManager gameManager;
   bool debug = false;
-  Map<String,List<String>> freeUnits = {};
+  Map<String,Set<String>> freeUnits = {};
   List<Map<String, dynamic>> eventQueue = [];
   List<Map<String, dynamic>> pastEvent = [];
   List<Map<String, dynamic>> currentEvent = [];
@@ -147,10 +147,10 @@ class AIPlayer{
 
       ){
     freeUnits = {
-      "a" : village.community["a"]?.keys.toList() ?? [],
-      "h" : village.community["h"]?.keys.toList() ?? [],
-      "v" : village.community["v"]?.keys.toList() ?? [],
-      "s" : village.community["s"]?.keys.toList() ?? []
+      "a" : village.community["a"]?.keys.toSet() ?? {},
+      "h" : village.community["h"]?.keys.toSet() ?? {},
+      "v" : village.community["v"]?.keys.toSet() ?? {},
+      "s" : village.community["s"]?.keys.toSet() ?? {}
     };
     List<TownCenter> tcList = (village.community["T"]?.values.toList() ?? []).cast();
     tcs = tcList;
@@ -281,9 +281,7 @@ class AIPlayer{
       return {};
     }
 
-    logger("AIPlayer | getNearestResource--- Here are the desired resources $resources"); /// TO DELETE
     List<(Resources,(int,int))> resourcePositions = resources.values.map((res) => (res,estimateDistance(res.position, topLeftPos))).toList();
-    logger("AIPlayer | getNearestResource--- Here is the mapped array $resourcePositions"); /// TO DELETE
     if (resourcePositions.isEmpty) {
       logger("AIPlayer | getNearestResource--- Seems that it wasn't possible to sort the table");
       return {};
@@ -301,7 +299,7 @@ class AIPlayer{
     if (resource == {}) return -1;
     logger("RESOURCE IIIIIS ${resource}");
     logger("Drops points aaare ${village.community["T"] ?? "NULLLL"}");
-    List<(String,(int,int))> dropPoints = village.community["T"]?.entries.map((e) => (e.key,estimateDistance(e.value.position, resource.keys.first))).toList() ?? [];
+    List<(String,(int,int))> dropPoints = village.community["T"]?.entries.map((e) => (e.key,estimateDistance(e.value.position, resource.values.first.position))).toList() ?? [];
     if (dropPoints.isEmpty) return -1;
     dropPoints.sort((a,b) => a[1].compareTo(b[1]));
     (String, (int,int)) test = dropPoints[0];
@@ -325,7 +323,8 @@ class AIPlayer{
 
   List<String> getFreePeople(int number, String type) {
     int realNumber = (freeUnits[type]?.length ?? 0) > number ? number : (freeUnits[type]?.length ?? 0);
-    return freeUnits[type]?.sublist(0, realNumber) ?? [];
+
+    return freeUnits[type]?.toList().sublist(0, realNumber) ?? [];
   }
 
   bool checkIfTilesAreOccupied((int, int) size, (int, int) position) {
@@ -421,7 +420,8 @@ class AIPlayer{
     }
 
     (int,int) resKey = resourceToCollect.keys.first;
-    Resources resourceInstance = world.resources[type]![resKey]!;
+    Resources resourceInstance = resourceToCollect.values.first;
+    logger("AIPlayer | getResourcesActionDict--- Resource Instance : $resourceInstance");
 
     List<String> unitID = getFreePeople(1, "v");
 
@@ -820,7 +820,7 @@ class AIPlayer{
     logger("AIPlayer | checkResourceAction--- Event is ${event}");
     String targetRes = event["people"].first;
     if (gameManager.checkResourceStatus(targetRes)) {
-      logger("Finished collecting ${targetRes}");
+      logger("AIPlayer | checkResourceAction--- ${targetRes} finished collecting res ");
       event["status"] = "finished";
     }
   }
@@ -874,14 +874,15 @@ class AIPlayer{
   void clearBuildAction(Map<String, dynamic> event){
     for (String unit in event["people"]){
       logger("AIPlayer | clearBuildAction--- freeing ${unit}");
-      freeUnits.putIfAbsent("v", ()=>[]);
+      freeUnits.putIfAbsent("v", ()=>{});
       freeUnits["v"]!.add(unit);
     }
   }
 
   void clearResourcesActions(Map<String, dynamic> event){
     for (String unit in event["people"]){
-      freeUnits.putIfAbsent("v", ()=>[]);
+      logger("AIPlayer | clearUnitSpawnAction--- Clearing resourceAction freeing ${unit}");
+      freeUnits.putIfAbsent("v", ()=>{});
       freeUnits["v"]!.add(unit);
     }
   }
@@ -889,7 +890,7 @@ class AIPlayer{
   void clearAttackAction(Map<String, dynamic> event){
     String unitType = event["infos"]["unitType"];
     for (String unit in event["infos"]["unitType"]){
-      freeUnits.putIfAbsent(unitType, ()=>[]);
+      freeUnits.putIfAbsent(unitType, ()=> {});
       freeUnits[unitType]!.add(unit);
     }
   }
@@ -899,7 +900,7 @@ class AIPlayer{
     String unitID = event["infos"]["futureID"];
     String unitType = event["infos"]["unitType"];
     spawningUnit--;
-    freeUnits.putIfAbsent(unitType, ()=>[]);
+    freeUnits.putIfAbsent(unitType, ()=> {} );
     freeUnits[unitType]!.add(unitID);
   }
 

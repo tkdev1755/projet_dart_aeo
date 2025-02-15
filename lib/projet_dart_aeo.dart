@@ -225,8 +225,9 @@ readInput(List<int> args, GameManager gameManager, TerminalController tmc) {
     }
   });
   plusStream.listen((event){
-    if (gameManager.gameSpeed < 10){
-      gameManager.gameSpeed ++;
+    if (gameManager.gameSpeed <= 50){
+      gameManager.gameSpeed += 10;
+      print("Game speed at ${gameManager.gameSpeed}");
     }
   });
   minusStream.listen((event){

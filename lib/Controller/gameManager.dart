@@ -453,6 +453,7 @@ class GameManager{
       return -1;
     }
     else {
+      // Problème - ici une fois sur 2001231 le Une ressource est dans le town center et n'est pas correctement retirée du dictionnaire des ressources à l'initialisation, ce qui cause ce bug
       (int,int) resDistance = estimateDistance(unitInstance.position, resInstance.position);
       if (resDistance[0] <= 1 && resDistance[1]  <= 1 && !resToCollect["droppingResources"]){
         logger("Unit is near resource, start collecting");
