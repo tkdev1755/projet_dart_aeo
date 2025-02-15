@@ -61,31 +61,58 @@ class Unit{
 
 
 class Villager extends Unit{
-
   Villager(
       String uid,
       (int,int) position,
       int team
       ) : super("v", uid,team, position, 25, 2,1,0.8, 'I',25,cost: {"f" : 50});
-
-
-
 }
+
+class Archer extends Unit{
+  Archer(
+      String uid,
+      (int,int) position,
+      int team
+      ) : super("a", uid,team, position, 30, 4,4,1, 'I',35,cost: {"w": 25, "g": 45});
+}
+
+class Horseman extends Unit{
+  Horseman(
+      String uid,
+      (int,int) position,
+      int team
+      ) : super("h", uid,team, position, 45, 4,1,1.2, 'I',30,cost: {"f": 80, "g": 20});
+}
+
+class Swordsman extends Unit{
+  Swordsman(
+      String uid,
+      (int,int) position,
+      int team
+      ) : super("s", uid,team, position, 40, 4,1,0.9, 'I',20,cost: {"f": 80, "g": 20});
+}
+
 
 
 
 class UnitFactory {
   static final Map<String, Function> unitInitDict = {
     "v": (uid,position,team) => Villager(uid,position,team),
+    "a": (uid,position,team) => Archer(uid,position,team),
+    "h": (uid,position,team) => Horseman(uid,position,team),
+    "s": (uid,position,team) => Swordsman(uid,position,team),
+
+
+
   };
   static final Map<String, Map<String, int>> unitCostDict = {
     "a": {"w": 25, "g": 45},
     "h": {"f": 80, "g": 20},
-    "s": {"f": 50, "20": 20},
+    "s": {"f": 50, "g": 20},
     "v": {"f": 50}
   };
   static Map<String,int>? getUnitCost(String key){
-    if (unitInitDict.containsKey(key)){
+    if (unitCostDict.containsKey(key)){
       return unitCostDict[key]!;
     }
     return null;

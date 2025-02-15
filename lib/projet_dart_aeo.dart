@@ -69,11 +69,12 @@ Map<int, CG.Color> colorMap = {
   8 : CG.Color.LIGHT_CYAN,
   9 : CG.Color.YELLOW,
   10 : CG.Color.RED,
+  11 : CG.Color(3, bright: true),
 };
 
 final buffer = StringBuffer();
 bool done = false;
-bool debug = true;
+bool debug = false;
 
 int tests(){
   World world = randomWorld({"X" : 120, "Y":120, "t": "g", "n" : 2});

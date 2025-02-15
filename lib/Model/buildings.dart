@@ -236,13 +236,31 @@ class BuildingFactory {
     "S" : (3,3),
   };
 
+  static Map<String, int> buildingHealthDict = {
+    "T" : 1000,
+    "H" : 200,
+    "C" : 200,
+    "F" : 100,
+    "B" : 500,
+    "S" : 500,
+    "A" : 500,
+    "K" : 800,
+
+  };
+
+
   static (int,int)? getSize(String key){
     if (buildingSizeDict.containsKey(key)) {
-      return buildingSizeDict[key]; // Call the constructor function
+      return buildingSizeDict[key];
     }
     return null;
   }
-
+  static getMaxHealth(String key){
+    if (buildingHealthDict.containsKey(key)) {
+      return buildingHealthDict[key];
+    }
+    return null;
+  }
   static String? getBuildingToSpawnFrom(String key){
     if (buildingSpawnDict.containsKey(key)){
       return buildingSpawnDict[key];

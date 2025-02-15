@@ -100,6 +100,7 @@ class World{
   int updateUnitPosition((int,int) oldPos,Unit unit){
     if (unitPositions.containsKey(unit.position)){
       unitPositions[unit.position]!.add(unit);
+      /// TODO - Remove this implementation, you need to change the code in the gamemanager which sends units to a drop point after they are full
       if (unitPositions.containsKey(oldPos)){
         unitPositions[oldPos]!.remove(unit);
         if (unitPositions[oldPos]!.isEmpty) {

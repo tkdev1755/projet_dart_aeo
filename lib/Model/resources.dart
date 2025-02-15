@@ -1,5 +1,7 @@
 
 
+import '../projet_dart_aeo.dart';
+
 class Resources{
   String name;
   int quantity;
@@ -21,7 +23,10 @@ class Wood extends Resources{
   Wood(
       (int,int) position,
       ) : super("w",100,position,);
-
+  @override
+  String toString() {
+    return "${colorMap[11]}$name${colorMap[9]}";
+  }
 }
 
 class Gold extends Resources{

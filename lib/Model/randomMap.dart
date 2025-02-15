@@ -48,22 +48,80 @@ void cluster(World world, Resources resource, (int,int) key,
   }
 }
 
+
 World randomWorld(Map<String, dynamic> dict) {
-  var newWorld = World(dict["X"], dict["Y"]);
-  var mapType = dict["t"];
-  var wealth = (newWorld.width * newWorld.height ~/ 4800);
+  World newWorld = World(dict["X"], dict["Y"]);
+  String mapType = dict["t"];
+  int wealth = (newWorld.width * newWorld.height ~/ 4800); // = 3 for a 120x120 map
+
+  Random random = Random();
 
   if (mapType == "g") {
-    for (var i = 0; i < wealth + 2; i++) {
-      var number = Random().nextInt(8) + 1;
-      var x = Random().nextInt(newWorld.width ~/ number);
-      var y = Random().nextInt(newWorld.height ~/ (9 - number));
+    // Most gold in the center
+    for (int i = 0; i < wealth + 2; i++) {
+      int number = random.nextInt(8) + 1;
+      int x = random.nextInt(newWorld.width ~/ number);
+      int y = random.nextInt(newWorld.height ~/ (9 - number));
+
+      cluster(newWorld, Wood((newWorld.width - x - 1, y)), (newWorld.width - x - 1, y));
+      cluster(newWorld, Wood((newWorld.width - x - 1, y)), (newWorld.width - x - 1, y));
+      cluster(newWorld, Wood((newWorld.width - x - 1, newWorld.height - y - 1)), (newWorld.width - x - 1, newWorld.height - y - 1));
+      cluster(newWorld, Wood((x, newWorld.height - y - 1)), (x, newWorld.height - y - 1));
+    }
+
+    for (int i = 0; i < wealth + 2; i++) {
+      int x = random.nextInt(newWorld.width ~/ 3);
+      int y = random.nextInt(newWorld.height ~/ 3);
+
+      cluster(newWorld, Wood((x,y)), (x, y), 50, 25);
+      cluster(newWorld, Wood((newWorld.width - x - 1, y)), (newWorld.width - x - 1, y), 50, 25);
+      cluster(newWorld, Wood((newWorld.width - x - 1, newWorld.height - y - 1)), (newWorld.width - x - 1, newWorld.height - y - 1), 50, 25);
+      cluster(newWorld, Wood((x, newWorld.height - y - 1)), (x, newWorld.height - y - 1), 50, 25);
+    }
+
+    for (int i = 0; i < wealth; i++) {
+      int x = random.nextInt(newWorld.width ~/ 4) + newWorld.width ~/ 4;
+      int y = random.nextInt(newWorld.height ~/ 4) + newWorld.height ~/ 4;
+
+      cluster(newWorld, Gold((x,y)), (x, y), 50, 25);
+      cluster(newWorld, Gold((newWorld.width - x - 1, y)), (newWorld.width - x - 1, y), 50, 25);
+      cluster(newWorld, Gold((newWorld.width - x - 1, newWorld.height - y - 1)), (newWorld.width - x - 1, newWorld.height - y - 1), 50, 25);
+      cluster(newWorld, Gold((x, newWorld.height - y - 1)), (x, newWorld.height - y - 1), 50, 25);
+    }
+  } else {
+    // Arabia, Medium clusters of wood, open center
+    for (int i = 0; i < wealth + 1; i++) {
+      int number = random.nextInt(6) + 1;
+      int x = random.nextInt(newWorld.width ~/ number);
+      int y = random.nextInt(newWorld.height ~/ (7 - number));
+
       cluster(newWorld, Wood((x,y)), (x, y));
-      cluster(newWorld, Wood((x,y)), (newWorld.width - x - 1, y));
-      cluster(newWorld, Wood((x,y)), (newWorld.width - x - 1, newWorld.height - y - 1));
-      cluster(newWorld, Wood((x,y)), (x, newWorld.height - y - 1));
+      cluster(newWorld, Wood((newWorld.width - x - 1, y)), (newWorld.width - x - 1, y));
+      cluster(newWorld, Wood((newWorld.width - x - 1, newWorld.height - y - 1)), (newWorld.width - x - 1, newWorld.height - y - 1));
+      cluster(newWorld, Wood((x, newWorld.height - y - 1)), (x, newWorld.height - y - 1));
+    }
+
+    for (int i = 0; i < wealth + 4; i++) {
+      int x = random.nextInt(newWorld.width ~/ 2);
+      int y = random.nextInt(newWorld.height ~/ 2);
+
+      cluster(newWorld, Wood((x,y)), (x, y), 50, 30);
+      cluster(newWorld, Wood((newWorld.width - x - 1, y)), (newWorld.width - x - 1, y), 50, 30);
+      cluster(newWorld, Wood((newWorld.width - x - 1, newWorld.height - y - 1)), (newWorld.width - x - 1, newWorld.height - y - 1), 50, 30);
+      cluster(newWorld, Wood((x, newWorld.height - y - 1)), (x, newWorld.height - y - 1), 50, 30);
+    }
+
+    for (int i = 0; i < wealth; i++) {
+      int x = random.nextInt(newWorld.width ~/ 2.5.toInt());
+      int y = random.nextInt(newWorld.height ~/ 2.5.toInt());
+
+      cluster(newWorld, Gold((x,y)), (x, y), 50, 25);
+      cluster(newWorld, Gold((newWorld.width - x - 1, y),), (newWorld.width - x - 1, y), 50, 25);
+      cluster(newWorld, Gold((newWorld.width - x - 1, newWorld.height - y - 1)), (newWorld.width - x - 1, newWorld.height - y - 1), 50, 25);
+      cluster(newWorld, Gold((x, newWorld.height - y - 1)), (x, newWorld.height - y - 1), 50, 25);
     }
   }
+
   return newWorld;
 }
 

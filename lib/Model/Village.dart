@@ -47,7 +47,7 @@ class Village{
   }
 
   int getBuildingCount(String type){
-    return community[type]?.length ?? 0;
+    return community[type]?.values.where((e) => e.health == BuildingFactory.getMaxHealth(e.name)).length ?? 0;
   }
 
   bool canAfford(Map<String, int> costDict){
@@ -94,11 +94,12 @@ class Village{
     }
     else{
       if (!canAfford(building.cost)) {
-        logger("Can't afford building");
+        logger("Village | addBuilding--- Can't afford building, price asked is ${building.cost} and available resource are ${resources}");
         return -1;
       }
       if (community.containsKey(building.name)){
         community[building.name]![building.uid] = building;
+        deductResources(building.cost);
       }
       else{
         community[building.name] ={};

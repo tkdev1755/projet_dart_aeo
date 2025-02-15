@@ -195,12 +195,12 @@ class GameManager{
     List<(int,int)> barriers = getMapBarriers();
     (int,int) distance = estimateDistance(unit.position, goal);
     if (optionalPath == null){
-      logger("No optionnal path");
+      logger("GameManager | addUnitToMoveDict--- No optionnal path");
     }
     List<(int,int)> path = optionalPath ?? AStar(rows: world.width, columns: world.height, start: unit.position, end: goal, barriers: barriers).findThePath().toList();
     if (path.isEmpty && distance[0] >= 1 && distance[1] >= 1){
-      logger("Crash while computing path, here are the details");
-      logger("GameManager | addUnitToMoveDict--- start was ${unit.position} & goal was ${goal} ");
+      logger("GameManager | addUnitToMoveDict--- Crash while computing path, here are the details");
+      logger("GameManager | addUnitToMoveDict--- Start was ${unit.position} & Goal was ${goal}, position was ${world.tiles[goal]?.contains == null ? "empty" : "filled"} ");
       return -1;
     }
     logger(" path is {$path}");
@@ -253,12 +253,12 @@ class GameManager{
     (int,int)? nearDpPos = getEmptyTile(nearDP.position).firstOrNull;
     (int,int)? resourcePos = getEmptyTile(selectRes.position).firstOrNull;
     if (resourcePos == null || nearDpPos == null){
-      logger("Enclaved building or resource, impossible to get to");
+      logger("GameManager | addResourceToCollectDict--- Enclaved building or resource, impossible to get to");
       return (-1,-1);
     }
 
     List<(int,int)> nearDPPath = AStar(rows: world.width, columns: world.height, start: resourcePos, end: nearDpPos, barriers: getMapBarriers()).findThePath().toList();
-    logger("while adding resCollect had this path $nearDPPath");
+    logger("GameManager | addResourceToCollectDict--- While adding, resCollect had this path $nearDPPath");
     resourceDict[unit.uid] = {
       "resPosition" : selectRes.position,
       "resEstimatedPosition" : resourcePos,
@@ -279,7 +279,7 @@ class GameManager{
   int addUnitToAttackDict(List<Unit> attackers, dynamic target){
     (int,int) targetPosition = moveDict.containsKey(target.uid) && (target is Unit) ? moveDict[target.uid]!["goal"] : target.position;
     if (attackers[0].team == target.team){
-      logger("Friendly fire not allowed");
+      logger("GameManager | addResourceToCollectDict--- Friendly fire not allowed");
       return -1;
     }
     else{
@@ -307,14 +307,11 @@ class GameManager{
     Map<String, dynamic> unitToMove = moveDict[uid]!;
     Unit unitInstance = getUnitInstance(unitToMove["unitTeam"], uid, unitToMove["unitType"]);
     if (moveDict[uid]!["timeElapsed"] >= moveDict[uid]!["timeToTile"]){
-      logger("Unit arrived to the next tile");
-      logger("path is ${moveDict[uid]!["path"]}");
-      logger("Goal is ${moveDict[uid]!["goal"]}");
       moveDict[uid]!["timeElapsed"] = 0;
       (int,int) oldPos = moveDict[uid]!["path"][0];
       (moveDict[uid]!["path"] as List<(int,int)>).removeAt(0);
       if (moveDict[uid]!["nextTile"] == moveDict[uid]!["goal"]){
-        logger("Next position is the final one");
+        logger("GameManager | moveUnit--- unit next position is the final one");
         moveDict[uid]!["arrived"] = true;
         unitInstance.position = moveDict[uid]!["path"][0];
         world.updateUnitPosition(oldPos, unitInstance);
@@ -379,8 +376,7 @@ class GameManager{
     double igDeltaInSeconds = igDelta/1000;
     Map<String, dynamic> unitToSpawn = spawnDict[uid]!;
     if (unitToSpawn["fullyTrained"]) {
-      logger("Unit fully trained, starting healthFill");
-      logger("Initializing unit");
+      logger("GameManager | spawnUnit--- Unit fully trained,Initializing unit");
       dynamic newUnit = UnitFactory.createUnit(
           unitToSpawn["unitType"], unitToSpawn["newID"],
           unitToSpawn["spawnPosition"], unitToSpawn["unitTeam"]);
@@ -395,7 +391,7 @@ class GameManager{
         unitToSpawn["fullyTrained"] = true;
       }
       else{
-        logger("GameManager | spawnUnit--- training unit ${unitToSpawn["newID"]} - time : ${unitToSpawn["timeElapsed"]} ");
+        logger("GameManager | spawnUnit--- training unit ${unitToSpawn["newID"]}, type: ${unitToSpawn["unitType"]} - time : ${unitToSpawn["timeElapsed"]} ");
         unitToSpawn["timeElapsed"] += igDeltaInSeconds;
       }
     }
@@ -446,22 +442,32 @@ class GameManager{
     Map<String,dynamic> resToCollect = resourceDict[id]!;
     Unit unitInstance = getUnitInstance(resToCollect["unitTeam"], id, resToCollect["unitType"]);
     Resources? resInstance = world.resources[resToCollect["resType"]]?[resToCollect["resPosition"]];
+    logger("GameManager | collectResources--- RessourcesInstance ? ${resInstance ?? "NULL"}");
     logger("GameManager | collectResources--- Ressources in map ? ${world.tiles[resInstance?.position]?.contains ?? "Nulllll"}");
+    logger("GameManager | collectResources--- Resource in resDict ? ${world.resources[resInstance?.name]?[resInstance?.position] ?? "Nulllll"}");
     (int,int) dpPos = resToCollect["nearDPPos"];
     if (resInstance == null) {
-      logger("Resources doesn't exist");
+      logger("GameManager | collectResources--- Resources doesn't exist");
+      if (unitInstance.isFull()){
+        logger("GameManager | collectResources--- Dropping resources");
+        resToCollect["droppingResources"] = true;
+        addUnitToMoveDict(unitInstance, resToCollect["nearDPPos"], optionalPath: List.from(resToCollect["nearDPPath"]));
+      }
+      else{
+        resToCollect["collectedResources"] = true;
+      }
       return -1;
     }
     else {
-      // Problème - ici une fois sur 2001231 le Une ressource est dans le town center et n'est pas correctement retirée du dictionnaire des ressources à l'initialisation, ce qui cause ce bug
       (int,int) resDistance = estimateDistance(unitInstance.position, resInstance.position);
       if (resDistance[0] <= 1 && resDistance[1]  <= 1 && !resToCollect["droppingResources"]){
-        logger("Unit is near resource, start collecting");
+        logger("GameManager | collectResources--- Unit is near resource, start collecting");
         resToCollect["timeElapsed"] = resToCollect["timeElapsed"]+ igDelta;
         if (resToCollect["timeElapsed"] >= 2.4){
-          logger("Added one ${resInstance.name} to unit ${unitInstance.uid} pouch");
+          logger("GameManager | collectResources--- Added one ${resInstance.name} to unit ${unitInstance.uid} pouch");
           unitInstance.pouch[resInstance.name] = unitInstance.pouch[resInstance.name]! + 1;
           if (resInstance.quantity != 0){
+            logger("GameManager | collectResources--- RessourcesInstance ? ${resInstance.quantity ?? "NULL"}");
             resToCollect["quantity"] = resToCollect["quantity"] - 1;
             world.resources[resToCollect["resType"]]![resInstance.position]!.quantity --;
             world.tiles[resInstance.position]!.contains.quantity --;
@@ -478,7 +484,7 @@ class GameManager{
           resToCollect["timeElapsed"] = 0;
         }
         if (unitInstance.isFull()){
-          logger("Unit is full, going back to DP");
+          logger("GameManager | collectResources--- Unit is full, going back to DP");
           resToCollect["droppingResources"] = true;
           addUnitToMoveDict(unitInstance, resToCollect["nearDPPos"], optionalPath: List.from(resToCollect["nearDPPath"]));
         }
@@ -505,7 +511,7 @@ class GameManager{
         }
       }
       else{
-        logger("waiting for unit to come to resource");
+        logger("GameManager | collectResources--- Waiting for unit to come to resource");
       }
     }
     return 0;
