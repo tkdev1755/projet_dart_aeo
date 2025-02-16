@@ -121,7 +121,7 @@ class Village{
       return -1;
     }
     if (!canAfford(unit.cost)) {
-      logger("Can't afford the unit");
+      logger("Village | addUnit--- Can't afford the unit");
       return -1;
     }
     world.addUnit(unit);

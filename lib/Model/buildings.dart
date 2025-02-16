@@ -216,7 +216,8 @@ class BuildingFactory {
     "F" : (uid,position,team) => Farm(uid,position,team),
     "B" : (uid,position,team) => Barracks(uid,position,team),
     "S" : (uid,position,team) => Stable(uid,position,team),
-    "A" : (uid,position,team) => Keep(uid,position,team),
+    "A" : (uid,position,team) => ArcheryRange(uid,position,team),
+    "K" : (uid,position,team) => Keep(uid,position,team),
   };
 
   static final Map<String, String> buildingSpawnDict = {

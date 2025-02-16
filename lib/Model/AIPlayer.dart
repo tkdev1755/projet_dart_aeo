@@ -137,7 +137,7 @@ class AIPlayer{
   List<TownCenter> tcs = [];
   int spawningUnit = 0;
   (int,int) topVillageBorder = (0,0);
-  Map<String, bool> muteDebugMap = {"SSA" : false, "SBA" : false, "SRA" : false};
+  Map<String, bool> muteDebugMap = {"SSA" : false, "SBA" : true, "SRA" : true};
   AIPlayer(
       this.world,
       this.village,
@@ -152,6 +152,7 @@ class AIPlayer{
       "v" : village.community["v"]?.keys.toSet() ?? {},
       "s" : village.community["s"]?.keys.toSet() ?? {}
     };
+    logger("AIPlayer | Initialization--- There is ${freeUnits}");
     List<TownCenter> tcList = (village.community["T"]?.values.toList() ?? []).cast();
     tcs = tcList;
     if (tcs.isNotEmpty){
@@ -170,7 +171,7 @@ class AIPlayer{
       logger("AIPlayer | playTurn--- Minworkers hit, playing now");
       setBuildingAction(checkBuildings(), muteDebug: muteDebugMap["SBA"]);
       setResourceAction(village.resources, muteDebug: muteDebugMap["SRA"]);
-
+      setHumanAction();
     }
     for (var k in eventQueue){
       launchAction(k);
@@ -483,6 +484,7 @@ class AIPlayer{
   }
 
   /// Part where I set the actions
+
   void setResourceAction(Map<String, int> concernedRes, {bool? muteDebug}) {
     bool oldDebugValue = debug;
     if (debug){
@@ -538,14 +540,14 @@ class AIPlayer{
     if (debug){
       logger("AIPlayer | SetBuildingAction--- debug  will be  ${!((muteDebug ?? false) && debug) ? "not muted" : "muted" }");
       debug = !((muteDebug ?? false) && debug);
-
     }
     if (buildings["T"] == 0) {
       var buildingEvent = getBuildingActionDict("T");
       eventQueue.add(buildingEvent);
       debug = oldDebugValue;
       return;
-    } else {
+    }
+    else {
       var buildingPriority = getBuildingsPriority();
       var builtBuildings = [
         buildings["A"]! + buildings["K"]! + buildings["S"]! + buildings["B"]!,
@@ -577,8 +579,9 @@ class AIPlayer{
           }
         }
         logger("AIPlayer | setBuildingAction--- leastDeveloppedBLD is ${leastDeveloppedBuildingName}");
-        if (!isAffordable(buildingCostENUM[leastDeveloppedBuildingName]!)) {
-          logger("Can't afford building");
+        logger("AIPlayer | setBuildingAction--- leastDeveloppedBLD is ${buildingCostENUM[leastDeveloppedBuildingName]!}");
+        if (!village.canAfford(buildingCostENUM[leastDeveloppedBuildingName]!)) {
+          logger("AIPlayer | setBuildingAction--- Can't afford building");
           debug = oldDebugValue;
           return;
         }
@@ -803,6 +806,7 @@ class AIPlayer{
     int buildResult  = village.addBuilding(newBuilding);
     if (buildResult < 0){
       logger("AIPlayer | launchBuildAction--- Error while adding the building to the village, and to the world, cancelling action");
+      return;
     }
     logger("Added the building to the willage");
     gameManager.addBuildingToBuildDict(newBuilding, actionDict["people"]);
@@ -817,10 +821,11 @@ class AIPlayer{
     for (String id in actionDict["people"]){
       Unit unitInstance = village.community[actionDict["infos"]["unitType"]]![id]!;
       gameManager.addUnitToMoveDict(unitInstance, actionDict["infos"]["target"]);
+      unitList.add(unitInstance);
     }
     Unit? targetUnit = world.getVillage(actionDict["infos"]["targetTeam"]).community[actionDict["infos"]["targetType"]]?[actionDict["infos"]["targetID"]];
     if (targetUnit == null){
-      logger("LaunchHumanAction --- unit doesnot exists");
+      logger("AIPlayer | launchHumanAction --- unit doesnot exists");
       return;
     }
     gameManager.addUnitToAttackDict(unitList, targetUnit);

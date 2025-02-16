@@ -69,7 +69,7 @@ Map<int, CG.Color> colorMap = {
   8 : CG.Color.LIGHT_CYAN,
   9 : CG.Color.YELLOW,
   10 : CG.Color.RED,
-  11 : CG.Color(3, bright: true),
+  11 : CG.Color(3, bright: false),
 };
 
 final buffer = StringBuffer();
@@ -176,6 +176,7 @@ List<AIPlayer> initializeAIs(World world, gameManager){
   for (var k in world.villages){
     ais.add(AIPlayer(world, k, generalPlayStyle, 100, gameManager));
   }
+  logger("Game | Initialized ${ais.length}");
   return ais;
 }
 
@@ -258,6 +259,11 @@ gameLoop(World world, GameManager gameManager) async {
   List<int> args = [world.height, world.width];
   console.rawMode = false;
   console.hideCursor();
+  String allVillagesStat = "";
+  for (Village village in world.villages){
+    allVillagesStat = "${village.getStatus()}\n";
+  }
+  logger("Game | gameLoopVillages stat atm \n ${allVillagesStat}");
   readInput(args, gameManager,termController);
   int statNumber = 0;
   ais = initializeAIs(world, gameManager);
@@ -284,9 +290,8 @@ gameLoop(World world, GameManager gameManager) async {
         update(world, gameManager);
         gameManager.tick = DateTime.now();
         ais[currentAI].playTurn();
-        if (currentAI == aiNumber-1){
+        if (currentAI != aiNumber-1){
           currentAI++;
-
         }
         else{
           currentAI = 0;
