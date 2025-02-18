@@ -74,7 +74,7 @@ Map<int, CG.Color> colorMap = {
 
 final buffer = StringBuffer();
 bool done = false;
-bool debug = false;
+bool debug = true;
 
 int tests(){
   World world = randomWorld({"X" : 120, "Y":120, "t": "g", "n" : 2});

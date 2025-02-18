@@ -53,6 +53,7 @@ class GameManager{
   }
 
   int removeDeadUnit(String uid){
+    logger("GameManager | Unit ${uid} is dead, removing it");
     if (moveDict.containsKey(uid)){
       moveDict.remove(uid);
     }
@@ -69,6 +70,21 @@ class GameManager{
     }
     return 0;
   }
+
+  bool checkIfDead(String id ,{String? calledFrom}){
+    if (unitsToRemove.isNotEmpty){
+      if (unitsToRemove.where((e) => e.uid == id).isNotEmpty){
+        logger("GameManager | ${(calledFrom) ?? " "}/checkIfDead---- Unit $id was dead so related action was aborted");
+        return true;
+      }
+      else{
+        return false;
+      }
+    }
+    else{
+      return false;
+    }
+  }
   int getTeamNumber(String uid){
     int pIndex = uid.indexOf("p");
     int eqIndex = uid.indexOf("q");
@@ -83,11 +99,16 @@ class GameManager{
     double igDeltaInSeconds = igDelta/(pow(10, 6));
     return igDeltaInSeconds;
   }
+
   List<(int,int)> getEmptyTile((int,int) pos){
     List<(int,int)> adjacentPositions = [(pos[0]-1,pos[1]-1),(pos[0]+1,pos[1]+1),(pos[0]-1,pos[1]),(pos[0]+1,pos[1]),(pos[0],pos[1]-1),(pos[0],pos[1]+1),(pos[0]-1,pos[1]+1),(pos[0]+1,pos[1]-1)];
     return adjacentPositions.where((e) => (!world.tiles.containsKey(e) || world.tiles[e]!.contains == null)).toList();
   }
+
   int checkModifications(){
+    for (Unit unit in unitsToRemove) {
+        removeDeadUnit(unit.uid);
+    }
     checkUnitToMove();
     checkBuildingToBuild();
     checkUnitToSpawn();
@@ -96,6 +117,7 @@ class GameManager{
     checkResourceToCollect();
     return 0;
   }
+
   int checkUnitToMove(){
     List<dynamic> elementToRemove = [];
     moveDict.forEach((k,v){
@@ -297,6 +319,9 @@ class GameManager{
   }
 
   int moveUnit(uid){
+    if (checkIfDead(uid,calledFrom: "moveUnit")) {
+      return -1;
+    }
     double igDelta = getDelta();
     Map<String, dynamic> unitToMove = moveDict[uid]!;
     Unit unitInstance = getUnitInstance(unitToMove["unitTeam"], uid, unitToMove["unitType"]);
@@ -323,6 +348,7 @@ class GameManager{
   }
 
   int attackUnit(uid){
+    if (checkIfDead(uid,calledFrom: "attackUnit")) return -1;
     Duration delta = DateTime.now().difference(tick);
     int igDelta = delta.inMilliseconds*gameSpeed;
     double igDeltaInSeconds = igDelta/1000;
@@ -335,10 +361,11 @@ class GameManager{
     if (targetPosition != attackingUnit["targetPosition"]
         && (updateDistance[0] > attackerInstance.range && updateDistance[1] > attackerInstance.range)){
       logger("GameManager | attackUnit--- Target position seems to have changed beyond attacker range");
+      logger("GameManager | attackUnit--- Old position was ${attackingUnit["targetPosition"]} and new position is ${targetPosition} ");
       addUnitToMoveDict(attackerInstance, targetPosition);
     }
     if (distanceToGoal[0] <= attackerInstance.range && distanceToGoal[1] <= attackerInstance.range){
-      logger("Now in range");
+      logger("GameManager | attackUnit--- Now in range");
       attackingUnit["targetInRange"] = true;
       if (attackingUnit["lastHitTime"] < 1){
         attackingUnit["lastHitTime"] += igDeltaInSeconds;
@@ -351,14 +378,15 @@ class GameManager{
           if(targetInstance is Unit){
             unitsToRemove.add(targetInstance);
           }
+
           logger("GameManager | attackUnit--- Finished killing unit");
           attackingUnit["finished"] = true;
         }
       }
     }
     else{
-      attackingUnit["targetInRange"] = true;
-      logger("not in range");
+      attackingUnit["targetInRange"] = false;
+      logger("GameManager | attackUnit--- Not in range of ${targetInstance.uid}");
 
     }
 
@@ -392,13 +420,22 @@ class GameManager{
     }
     return 0;
   }
-  
+
   int buildBuilding(String uid){
     Duration delta = DateTime.now().difference(tick);
     int igDelta = delta.inMilliseconds*gameSpeed;
     double igDeltaInSeconds = igDelta/1000;
     Map<String, dynamic> bldToBuild = buildDict[uid]!;
     Building buildingInstance = getBuildingInstance(bldToBuild["buildingTeam"], uid, bldToBuild["buildingType"]);
+    for (var units in bldToBuild["people"]){
+      logger("GameManager | buildBuilding --- ");
+      logger("GameManager | buildBuilding --- Unit numero ${units} is dead, removing it from builderList");
+      if (checkIfDead(units, calledFrom: "buildBuilding")) bldToBuild["people"].remove(units);
+    }
+    if (bldToBuild["people"].isEmpty) {
+      logger("GameManager | buildBuilding --- Seems that all units which were assigned to build the building are dead");
+      return -1;
+    }
     if (bldToBuild["readyToBuild"]){
       double timeToBuild = 3 * bldToBuild["timeToBuild"] / (
           (buildingInstance.builders) + 2);
@@ -433,6 +470,7 @@ class GameManager{
   }
 
   int collectResources(String id){
+    if (checkIfDead(id,calledFrom: "collectResources")) return -1;
     double igDelta = getDelta();
     Map<String,dynamic> resToCollect = resourceDict[id]!;
     Unit unitInstance = getUnitInstance(resToCollect["unitTeam"], id, resToCollect["unitType"]);
